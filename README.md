@@ -67,6 +67,12 @@ Les sous-titres karaoké sont générés dans tous les cas (la transcription tou
 | `MAX_CLIPS` | `5` | Nombre max de clips proposés par vidéo |
 | `DATA_DIR` | `./data` | Dossier des téléchargements et clips générés |
 
+## ⚡ Tester tout de suite (Google Colab, gratuit)
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Kazza2115/TIKTOKMONEYPRINTER/blob/claude/tiktok-clip-generator-31rslv/colab_demo.ipynb)
+
+Sans rien installer : ouvre le notebook, exécute les 3 cellules, et tu obtiens une URL publique temporaire vers l'app (protégée par mot de passe). Il te faut juste un compte Google et ta clé API Claude. Active le GPU (*Exécution → Modifier le type d'exécution → T4*) pour une transcription rapide.
+
 ## 🌐 Déploiement en ligne (Render)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Kazza2115/TIKTOKMONEYPRINTER)
