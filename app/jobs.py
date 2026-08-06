@@ -12,7 +12,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
 from . import config
-from .pipeline import analyzer, cutter, downloader, subtitles, transcriber
+from .pipeline import analyzer, analyzer_free, cutter, downloader, subtitles, transcriber
 
 STEPS = ["download", "transcribe", "analyze", "cut", "done"]
 
@@ -176,9 +176,14 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
             ]
             summary = ""
         else:
-            plan = analyzer.analyze(
-                transcript, src.title, src.duration, max_clips=max_clips
-            )
+            if job.mode == "auto_free":
+                plan = analyzer_free.analyze_free(
+                    transcript, src.title, src.duration, max_clips=max_clips
+                )
+            else:
+                plan = analyzer.analyze(
+                    transcript, src.title, src.duration, max_clips=max_clips
+                )
             suggestions = plan.clips
             summary = plan.video_summary
             if not suggestions:

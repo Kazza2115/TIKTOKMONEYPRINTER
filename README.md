@@ -3,6 +3,7 @@
 Transforme n'importe quelle vidéo longue (YouTube, Twitch, Vimeo…) en clips TikTok prêts à poster :
 
 - 🤖 **Analyse IA (Claude)** — repère les moments à fort potentiel viral en suivant les codes actuels : hook dans les 3 premières secondes, curiosity gap, émotion, rétention, payoff.
+- 🆓 **Mode automatique gratuit (sans API)** — sélection heuristique locale des moments forts (mots d'accroche, questions, énergie), avec découpage en parties et cliffhanger. Aucune clé, aucun compte, aucun coût. Moins fin que l'IA mais suffisant pour démarrer.
 - 🧩 **Parties 1/2/3 automatiques** — quand un moment fort est trop long, l'IA le découpe en série avec **cliffhanger** à la fin de chaque partie (coupe en pleine tension, juste avant la révélation).
 - 🎙️ **Sous-titres karaoké** — transcription locale (faster-whisper), mots incrustés en gros, mot actif surligné en jaune, style TikTok.
 - 📐 **Format 9:16** — recadrage centré + 1080×1920, hook incrusté en haut, badge « PARTIE X/N ».
