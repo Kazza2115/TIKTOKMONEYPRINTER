@@ -1,0 +1,173 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0d12;
+  --card: #16161f;
+  --border: #2a2a38;
+  --text: #f0f0f5;
+  --muted: #8a8a9a;
+  --accent: #ff2d55;
+  --accent2: #ffd60a;
+  --ok: #30d158;
+  --err: #ff453a;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+.logo span { color: var(--accent); }
+
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+h1 { font-size: 1.4rem; margin-bottom: 8px; }
+h2 { font-size: 1.1rem; margin-bottom: 12px; }
+
+.muted { color: var(--muted); }
+.small { font-size: 0.82rem; }
+.hidden { display: none; }
+.error { color: var(--err); margin-top: 8px; }
+
+form { margin-top: 18px; display: flex; flex-direction: column; gap: 14px; }
+label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; font-weight: 600; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.row label { flex: 1; min-width: 120px; }
+
+input, select, textarea {
+  background: #0f0f16;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 11px 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+input:focus, select:focus, textarea:focus { outline: 1px solid var(--accent); }
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.1); }
+button:disabled { opacity: 0.5; cursor: wait; }
+
+.job-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.job-list a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  flex-wrap: wrap;
+}
+.job-list a:hover { border-color: var(--accent); }
+
+.status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--border);
+}
+.status-done { background: var(--ok); color: #000; }
+.status-error { background: var(--err); }
+.status-running { background: var(--accent2); color: #000; }
+
+.steps { list-style: none; display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 12px; }
+.steps li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.steps li.active { border-color: var(--accent2); color: var(--accent2); }
+.steps li.done { border-color: var(--ok); color: var(--ok); }
+
+.bar { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.4s; }
+
+#clips { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-top: 18px; }
+
+.clip-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.clip-card video { width: 100%; aspect-ratio: 9/16; background: #000; }
+.clip-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.clip-body h3 { font-size: 0.95rem; }
+.score { color: var(--accent2); font-weight: 700; font-size: 0.85rem; }
+.badge-part {
+  display: inline-block;
+  background: var(--accent2);
+  color: #000;
+  font-weight: 800;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.caption {
+  background: #0f0f16;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+.clip-actions { display: flex; gap: 8px; }
+.clip-actions a, .clip-actions button {
+  flex: 1;
+  text-align: center;
+  font-size: 0.82rem;
+  padding: 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  background: var(--border);
+  color: var(--text);
+  border: none;
+  font-weight: 600;
+}
+.clip-actions a:hover, .clip-actions button:hover { background: var(--accent); }
+
+code { background: #0f0f16; padding: 2px 5px; border-radius: 4px; }

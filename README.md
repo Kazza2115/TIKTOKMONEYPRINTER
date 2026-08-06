@@ -1,0 +1,89 @@
+# 🎬 TikTok Money Printer
+
+Transforme n'importe quelle vidéo longue (YouTube, Twitch, Vimeo…) en clips TikTok prêts à poster :
+
+- 🤖 **Analyse IA (Claude)** — repère les moments à fort potentiel viral en suivant les codes actuels : hook dans les 3 premières secondes, curiosity gap, émotion, rétention, payoff.
+- 🧩 **Parties 1/2/3 automatiques** — quand un moment fort est trop long, l'IA le découpe en série avec **cliffhanger** à la fin de chaque partie (coupe en pleine tension, juste avant la révélation).
+- 🎙️ **Sous-titres karaoké** — transcription locale (faster-whisper), mots incrustés en gros, mot actif surligné en jaune, style TikTok.
+- 📐 **Format 9:16** — recadrage centré + 1080×1920, hook incrusté en haut, badge « PARTIE X/N ».
+- ✍️ **Légendes générées** — description + hashtags prêts à copier, score viral estimé pour chaque clip.
+- ✂️ **Mode manuel** — tu peux aussi donner tes propres timestamps si tu veux zapper l'IA.
+
+## Prérequis
+
+- **Python 3.10+**
+- **ffmpeg** dans le PATH
+  - Windows : `winget install ffmpeg` ou `scoop install ffmpeg`
+  - Debian/Ubuntu : `sudo apt install ffmpeg`
+  - macOS : `brew install ffmpeg`
+- Une **clé API Anthropic** (pour le mode IA) : https://platform.claude.com/
+
+## Installation
+
+```bash
+git clone https://github.com/Kazza2115/TIKTOKMONEYPRINTER.git
+cd TIKTOKMONEYPRINTER
+
+python -m venv .venv
+# Windows :
+.venv\Scripts\activate
+# Linux/macOS :
+source .venv/bin/activate
+
+pip install -r requirements.txt
+
+cp .env.example .env   # puis renseigne ANTHROPIC_API_KEY dans .env
+```
+
+## Lancement
+
+```bash
+python run.py
+```
+
+Ouvre http://127.0.0.1:5000 — colle une URL, choisis le mode, et laisse tourner.
+
+Le pipeline : **téléchargement → transcription → analyse IA → montage**. La première transcription télécharge le modèle Whisper (quelques centaines de Mo), c'est normal.
+
+## Mode manuel
+
+Une ligne par clip, format :
+
+```
+1:23-1:55 | HOOK OPTIONNEL EN HAUT DU CLIP | légende optionnelle #hashtag
+0:10-0:42
+```
+
+Les sous-titres karaoké sont générés dans tous les cas (la transcription tourne aussi en mode manuel).
+
+## Configuration (`.env`)
+
+| Variable | Défaut | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | — | Clé API pour l'analyse IA |
+| `CLAUDE_MODEL` | `claude-opus-5` | Modèle utilisé pour l'analyse |
+| `WHISPER_MODEL` | `small` | `tiny`/`base`/`small`/`medium`/`large-v3` — plus gros = plus précis mais plus lent |
+| `WHISPER_DEVICE` | `auto` | `cpu` ou `cuda` (GPU NVIDIA, beaucoup plus rapide) |
+| `MAX_CLIPS` | `5` | Nombre max de clips proposés par vidéo |
+| `DATA_DIR` | `./data` | Dossier des téléchargements et clips générés |
+
+## ⚠️ Note légale
+
+Télécharger du contenu YouTube tiers viole les CGU de la plateforme. Utilise cet outil sur **ton propre contenu** (ou du contenu dont tu as les droits) : tes vidéos, tes lives, tes sessions studio, les vidéos de tes artistes.
+
+## Architecture
+
+```
+app/
+├── config.py            # variables d'env, chemins, contraintes de durée
+├── jobs.py              # orchestrateur : pipeline en thread + persistance JSON
+├── routes.py            # API Flask + pages
+├── pipeline/
+│   ├── downloader.py    # yt-dlp
+│   ├── transcriber.py   # faster-whisper (timestamps par mot)
+│   ├── analyzer.py      # Claude : moments viraux + séries partie 1/2 + cliffhangers
+│   ├── subtitles.py     # génération .ass (karaoké, hook, badge partie)
+│   └── cutter.py        # ffmpeg : découpe + crop 9:16 + burn des sous-titres
+├── templates/           # UI (Jinja2)
+└── static/              # CSS + JS (polling du job)
+```

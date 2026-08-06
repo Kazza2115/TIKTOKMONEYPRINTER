@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>Transforme une vidéo longue en clips TikTok</h1>
+  <p class="muted">Colle une URL (YouTube, Twitch, Vimeo…). L'IA repère les moments chauds,
+    génère les hooks, les légendes, et découpe les longs passages en Partie 1 / Partie 2 avec cliffhanger.</p>
+
+  <form id="job-form">
+    <label>URL de la vidéo
+      <input type="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+    </label>
+
+    <div class="row">
+      <label>Mode
+        <select name="mode" id="mode-select">
+          <option value="ai">🤖 Automatique (IA)</option>
+          <option value="manual">✂️ Manuel (timestamps)</option>
+        </select>
+      </label>
+      <label>Nb max de clips
+        <input type="number" name="max_clips" value="5" min="1" max="10">
+      </label>
+      <label>Langue (vide = auto)
+        <input type="text" name="language" placeholder="fr" maxlength="5">
+      </label>
+    </div>
+
+    <label id="manual-block" class="hidden">Clips manuels — un par ligne :
+      <span class="muted small">format : <code>1:23-1:55 | HOOK OPTIONNEL | légende optionnelle</code></span>
+      <textarea name="manual_clips" rows="4" placeholder="0:42-1:12 | IL A TOUT PERDU EN 30 SECONDES | La suite en partie 2 👀 #storytime"></textarea>
+    </label>
+
+    <button type="submit" id="submit-btn">🚀 Générer les clips</button>
+    <p id="form-error" class="error hidden"></p>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Historique</h2>
+  {% if jobs %}
+  <ul class="job-list">
+    {% for j in jobs %}
+    <li>
+      <a href="/job/{{ j.id }}">
+        <span class="status status-{{ j.status }}">{{ j.status }}</span>
+        <strong>{{ j.video_title or j.url }}</strong>
+        <span class="muted small">{{ j.clips|length }} clip(s) — {{ j.created_at[:16].replace('T', ' ') }}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Aucun job pour l'instant.</p>
+  {% endif %}
+</section>
+{% endblock %}

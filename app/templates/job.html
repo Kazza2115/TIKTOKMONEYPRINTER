@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" id="job-view" data-job-id="{{ job.id }}">
+  <a href="/" class="muted small">← retour</a>
+  <h1 id="job-title">{{ job.video_title or job.url }}</h1>
+
+  <div id="progress-block">
+    <ol class="steps" id="steps">
+      <li data-step="download">📥 Téléchargement</li>
+      <li data-step="transcribe">🎙️ Transcription</li>
+      <li data-step="analyze">🧠 Analyse IA</li>
+      <li data-step="cut">🎬 Montage</li>
+    </ol>
+    <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+    <p id="job-status" class="muted"></p>
+    <p id="job-error" class="error hidden"></p>
+  </div>
+
+  <p id="video-summary" class="muted"></p>
+  <div id="clips"></div>
+</section>
+{% endblock %}
