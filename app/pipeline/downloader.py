@@ -46,14 +46,39 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
         cookie_file.write_text(cookies, encoding="utf-8")
         opts["cookiefile"] = str(cookie_file)
 
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        path = Path(ydl.prepare_filename(info))
-        # après merge, l'extension finale est mp4
-        if not path.exists():
-            path = path.with_suffix(".mp4")
-        if not path.exists():
-            raise FileNotFoundError(f"Fichier téléchargé introuvable pour {url}")
+    def _attempt(o):
+        with yt_dlp.YoutubeDL(o) as ydl:
+            info = ydl.extract_info(url, download=True)
+            path = Path(ydl.prepare_filename(info))
+            # après merge, l'extension finale est mp4
+            if not path.exists():
+                path = path.with_suffix(".mp4")
+            if not path.exists():
+                raise FileNotFoundError(f"Fichier téléchargé introuvable pour {url}")
+            return info, path
+
+    try:
+        info, path = _attempt(opts)
+    except yt_dlp.utils.DownloadError as e:
+        msg = str(e)
+        blocked = "403" in msg or "Forbidden" in msg or "not a bot" in msg.lower()
+        if blocked:
+            # 2e essai avec le client Android (contourne parfois le blocage)
+            retry = dict(opts)
+            retry["extractor_args"] = {"youtube": {"player_client": ["android"]}}
+            try:
+                info, path = _attempt(retry)
+            except yt_dlp.utils.DownloadError as e2:
+                raise RuntimeError(
+                    "Téléchargement bloqué par la plateforme (403). C'est fréquent sur les "
+                    "serveurs cloud : YouTube bloque les IP de datacenter (Colab, Render...). "
+                    "Solutions : 1) fournis tes cookies YouTube via YTDLP_COOKIES (cellule "
+                    "« Cookies » du notebook) ; 2) essaie une autre plateforme (Vimeo, "
+                    "Twitch...) ; 3) fais tourner l'app en local sur ton PC — ton IP "
+                    "résidentielle n'est pas bloquée."
+                ) from e2
+        else:
+            raise RuntimeError(f"Téléchargement impossible : {msg[:300]}") from e
 
     return SourceVideo(
         path=path,
