@@ -1,5 +1,6 @@
 """Téléchargement de la vidéo source via yt-dlp (YouTube, Twitch, Vimeo, ...)."""
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,6 +36,15 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
         "no_warnings": True,
         "progress_hooks": [hook],
     }
+
+    # En hébergement cloud, YouTube bloque souvent les IP de datacenter
+    # ("Sign in to confirm you're not a bot"). Fournis tes cookies via la
+    # variable YTDLP_COOKIES (contenu d'un export cookies.txt au format Netscape).
+    cookies = os.getenv("YTDLP_COOKIES")
+    if cookies:
+        cookie_file = dest_dir / ".cookies.txt"
+        cookie_file.write_text(cookies, encoding="utf-8")
+        opts["cookiefile"] = str(cookie_file)
 
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)

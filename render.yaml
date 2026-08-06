@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: tiktokmoneyprinter
+    runtime: docker
+    plan: starter # le plan free (512 Mo RAM) est trop juste pour Whisper + ffmpeg
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false # à renseigner dans le dashboard Render
+      - key: APP_PASSWORD
+        sync: false # mot de passe d'accès à la page (fortement conseillé)
+      - key: WHISPER_MODEL
+        value: tiny
+      - key: MAX_CLIPS
+        value: "5"

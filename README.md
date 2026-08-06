@@ -67,6 +67,26 @@ Les sous-titres karaoké sont générés dans tous les cas (la transcription tou
 | `MAX_CLIPS` | `5` | Nombre max de clips proposés par vidéo |
 | `DATA_DIR` | `./data` | Dossier des téléchargements et clips générés |
 
+## 🌐 Déploiement en ligne (Render)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Kazza2115/TIKTOKMONEYPRINTER)
+
+Le repo contient un `Dockerfile` et un `render.yaml` : la page se met en ligne en quelques clics et se redéploie automatiquement à chaque push GitHub.
+
+1. Crée un compte sur [render.com](https://render.com) et connecte ton GitHub.
+2. Clique le bouton ci-dessus (ou **New → Blueprint** et choisis ce repo).
+3. Renseigne les variables d'environnement demandées :
+   - `ANTHROPIC_API_KEY` — ta clé API Claude
+   - `APP_PASSWORD` — mot de passe d'accès à la page (**obligatoire** : sans lui, n'importe qui peut consommer ta clé API)
+4. Déploie. Ton URL sera du type `https://tiktokmoneyprinter.onrender.com`.
+
+**À savoir pour le cloud :**
+
+- **Plan Starter (~7 $/mois) recommandé** — le plan gratuit (512 Mo de RAM) est trop juste pour Whisper + ffmpeg. Le `render.yaml` force `WHISPER_MODEL=tiny` pour rester léger ; en local tu peux garder `small` ou mieux.
+- **YouTube bloque souvent les IP de datacenter.** Si les téléchargements échouent avec « Sign in to confirm you're not a bot », exporte tes cookies YouTube (extension navigateur « Get cookies.txt LOCALLY ») et colle le contenu du fichier dans la variable d'environnement `YTDLP_COOKIES` sur Render.
+- Les fichiers générés sont stockés en `/tmp` : ils disparaissent à chaque redéploiement. Télécharge tes clips au fur et à mesure.
+- Le même `Dockerfile` fonctionne aussi sur Railway, Fly.io ou Hugging Face Spaces si tu préfères.
+
 ## ⚠️ Note légale
 
 Télécharger du contenu YouTube tiers viole les CGU de la plateforme. Utilise cet outil sur **ton propre contenu** (ou du contenu dont tu as les droits) : tes vidéos, tes lives, tes sessions studio, les vidéos de tes artistes.
