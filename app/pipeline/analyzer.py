@@ -102,13 +102,35 @@ def analyze(transcript: Transcript, video_title: str, duration: float,
         f"{transcript.as_prompt_text()}"
     )
 
-    response = client.messages.parse(
-        model=config.CLAUDE_MODEL,
-        max_tokens=16000,
-        system=system,
-        messages=[{"role": "user", "content": user_content}],
-        output_format=ClipPlan,
-    )
+    import anthropic
+
+    try:
+        response = client.messages.parse(
+            model=config.CLAUDE_MODEL,
+            max_tokens=16000,
+            system=system,
+            messages=[{"role": "user", "content": user_content}],
+            output_format=ClipPlan,
+        )
+    except anthropic.AuthenticationError as e:
+        raise RuntimeError(
+            "Clé API invalide ou révoquée. Vérifie ANTHROPIC_API_KEY "
+            "(https://platform.claude.com/settings/keys)."
+        ) from e
+    except anthropic.RateLimitError as e:
+        raise RuntimeError(
+            "Limite de débit API atteinte. Attends une minute et relance."
+        ) from e
+    except anthropic.BadRequestError as e:
+        msg = str(e)
+        if "credit balance" in msg.lower() or "billing" in msg.lower():
+            raise RuntimeError(
+                "Ton compte API n'a pas de crédit. L'abonnement Claude.ai (Pro/Max) ne "
+                "couvre pas l'API : achète du crédit (5 $ suffisent) sur "
+                "https://platform.claude.com/settings/billing puis relance. "
+                "En attendant, le mode manuel fonctionne sans API."
+            ) from e
+        raise RuntimeError(f"Requête refusée par l'API : {msg}") from e
 
     if response.stop_reason == "refusal":
         raise RuntimeError("L'analyse a été refusée par le modèle. Réessaie ou passe en mode manuel.")
