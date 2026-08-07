@@ -25,6 +25,18 @@ def main() -> int:
     p.add_argument("--summary", default="", help="Fichier markdown de résumé (pour GitHub Actions)")
     a = p.parse_args()
 
+    try:
+        return _run(a)
+    except Exception as e:
+        msg = str(e)
+        print(f"❌ ERREUR : {msg}", flush=True)
+        if a.summary:
+            with open(a.summary, "w", encoding="utf-8") as f:
+                f.write(f"# ❌ La génération a échoué\n\n```\n{msg}\n```\n")
+        return 1
+
+
+def _run(a) -> int:
     manual = None
     if a.mode == "manual":
         manual = parse_manual_clips(a.manual_clips.replace(";;", "\n"))
