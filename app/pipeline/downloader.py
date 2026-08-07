@@ -5,6 +5,25 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+def _to_netscape(cookies_text: str) -> str:
+    """Accepte soit un fichier cookies.txt (format Netscape, avec tabulations),
+    soit la valeur brute de l'en-tête "cookie:" copiée depuis les outils de
+    développement (format "NOM=valeur; NOM2=valeur2; ...") qu'on convertit."""
+    txt = cookies_text.strip()
+    if txt.lower().startswith("cookie:"):
+        txt = txt[len("cookie:"):].strip()
+    if "\t" in txt or txt.startswith("# Netscape"):
+        return txt  # déjà au format Netscape
+
+    lines = ["# Netscape HTTP Cookie File"]
+    for pair in txt.split(";"):
+        name, sep, value = pair.strip().partition("=")
+        if not sep or not name:
+            continue
+        lines.append(f".youtube.com\tTRUE\t/\tTRUE\t2147483647\t{name}\t{value}")
+    return "\n".join(lines) + "\n"
+
+
 @dataclass
 class SourceVideo:
     path: Path
@@ -39,11 +58,13 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
 
     # En hébergement cloud, YouTube bloque souvent les IP de datacenter
     # ("Sign in to confirm you're not a bot"). Fournis tes cookies via la
-    # variable YTDLP_COOKIES (contenu d'un export cookies.txt au format Netscape).
+    # variable YTDLP_COOKIES : soit un export cookies.txt (format Netscape),
+    # soit directement la ligne "cookie:" copiée depuis les outils de
+    # développement du navigateur (F12) — convertie automatiquement.
     cookies = os.getenv("YTDLP_COOKIES")
-    if cookies:
+    if cookies and cookies.strip():
         cookie_file = dest_dir / ".cookies.txt"
-        cookie_file.write_text(cookies, encoding="utf-8")
+        cookie_file.write_text(_to_netscape(cookies), encoding="utf-8")
         opts["cookiefile"] = str(cookie_file)
 
     def _attempt(o):
