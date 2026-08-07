@@ -63,6 +63,8 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
         "no_warnings": True,
         "ignoreerrors": False,
         "progress_hooks": [hook],
+        # clients les plus résistants à la détection anti-bot de YouTube
+        "extractor_args": {"youtube": {"player_client": ["tv", "web_safari", "web"]}},
     }
 
     # En hébergement cloud, YouTube bloque souvent les IP de datacenter
