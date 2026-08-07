@@ -52,7 +52,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
 
       - name: Dépendances
         run: |
@@ -60,6 +59,9 @@ jobs:
             sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           fi
           pip install -q -r requirements.txt
+          # YouTube change constamment : on force la toute dernière version de yt-dlp
+          pip install -q -U --pre "yt-dlp[default]"
+          yt-dlp --version
 
       - name: Génération des clips
         env:

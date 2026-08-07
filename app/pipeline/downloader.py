@@ -104,10 +104,13 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
         bad_format = "requested format" in low or "format is not available" in low
 
         if blocked or bad_format:
-            # 2e essai : client Android + format le plus permissif possible
+            # 2e essai : format le plus permissif + clients compatibles cookies.
+            # (le client "android" ignore les cookies : on ne l'utilise que
+            #  s'il n'y a PAS de cookies, sinon on garde les clients par défaut)
             retry = dict(opts)
-            retry["extractor_args"] = {"youtube": {"player_client": ["android", "web"]}}
-            retry["format"] = "best/bestvideo+bestaudio"
+            retry.pop("format", None)  # laisse yt-dlp choisir le meilleur défaut
+            if not opts.get("cookiefile"):
+                retry["extractor_args"] = {"youtube": {"player_client": ["android", "web"]}}
             try:
                 info, path = _attempt(retry)
             except yt_dlp.utils.DownloadError as e2:
