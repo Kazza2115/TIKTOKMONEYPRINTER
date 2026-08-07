@@ -53,12 +53,15 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
                 progress_cb(d.get("downloaded_bytes", 0) / total)
 
     opts = {
-        "format": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
+        # sélection souple : idéalement <=1080p, sinon la meilleure dispo,
+        # sinon n'importe quel format en dernier recours
+        "format": "bestvideo[height<=1080]+bestaudio/best[height<=1080]/bestvideo+bestaudio/best",
         "merge_output_format": "mp4",
         "outtmpl": str(dest_dir / "%(id)s.%(ext)s"),
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
+        "ignoreerrors": False,
         "progress_hooks": [hook],
     }
 
@@ -96,22 +99,25 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
         info, path = _attempt(opts)
     except yt_dlp.utils.DownloadError as e:
         msg = str(e)
-        blocked = "403" in msg or "Forbidden" in msg or "not a bot" in msg.lower()
-        if blocked:
-            # 2e essai avec le client Android (contourne parfois le blocage)
+        low = msg.lower()
+        blocked = "403" in msg or "forbidden" in low or "not a bot" in low
+        bad_format = "requested format" in low or "format is not available" in low
+
+        if blocked or bad_format:
+            # 2e essai : client Android + format le plus permissif possible
             retry = dict(opts)
-            retry["extractor_args"] = {"youtube": {"player_client": ["android"]}}
+            retry["extractor_args"] = {"youtube": {"player_client": ["android", "web"]}}
+            retry["format"] = "best/bestvideo+bestaudio"
             try:
                 info, path = _attempt(retry)
             except yt_dlp.utils.DownloadError as e2:
-                raise RuntimeError(
-                    "Téléchargement bloqué par la plateforme (403). C'est fréquent sur les "
-                    "serveurs cloud : YouTube bloque les IP de datacenter (Colab, Render...). "
-                    "Solutions : 1) fournis tes cookies YouTube via YTDLP_COOKIES (cellule "
-                    "« Cookies » du notebook) ; 2) essaie une autre plateforme (Vimeo, "
-                    "Twitch...) ; 3) fais tourner l'app en local sur ton PC — ton IP "
-                    "résidentielle n'est pas bloquée."
-                ) from e2
+                if "403" in str(e2) or "forbidden" in str(e2).lower():
+                    raise RuntimeError(
+                        "Téléchargement bloqué par YouTube (403). Tes cookies sont "
+                        "probablement expirés : refais un export frais et mets à jour "
+                        "le secret YTDLP_COOKIES."
+                    ) from e2
+                raise RuntimeError(f"Téléchargement impossible : {str(e2)[:300]}") from e2
         else:
             raise RuntimeError(f"Téléchargement impossible : {msg[:300]}") from e
 
