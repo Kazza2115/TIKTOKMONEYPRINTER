@@ -40,8 +40,13 @@ def api_create_job():
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
 
+    framing = data.get("framing") or "fit"
+    if framing not in ("fit", "crop"):
+        framing = "fit"
+
     job = jobs.create_job(
-        url, mode=mode, manual_clips=manual_clips, language=language, max_clips=max_clips
+        url, mode=mode, manual_clips=manual_clips, language=language,
+        max_clips=max_clips, framing=framing,
     )
     return jsonify(job.to_dict()), 201
 

@@ -37,7 +37,8 @@ class ClipResult:
 class Job:
     id: str
     url: str
-    mode: str  # "ai" | "manual"
+    mode: str  # "ai" | "auto_free" | "manual"
+    framing: str = "fit"  # "fit" (vidéo entière + fond flouté) | "crop" (zoom)
     status: str = "pending"  # pending | running | done | error
     step: str = "download"
     progress: float = 0.0
@@ -120,8 +121,9 @@ def parse_manual_clips(text: str) -> list[dict]:
 
 
 def create_job(url: str, mode: str = "ai", manual_clips: list[dict] | None = None,
-               language: str | None = None, max_clips: int | None = None) -> Job:
-    job = Job(id=uuid.uuid4().hex[:12], url=url, mode=mode)
+               language: str | None = None, max_clips: int | None = None,
+               framing: str = "fit") -> Job:
+    job = Job(id=uuid.uuid4().hex[:12], url=url, mode=mode, framing=framing)
     with _lock:
         _jobs[job.id] = job
     _save(job)
@@ -208,7 +210,10 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
                 out_path=clip_dir / f"clip_{i + 1:02d}.ass",
             )
             filename = f"clip_{i + 1:02d}.mp4"
-            cutter.cut_clip(src.path, c.start, c.end, ass_path, clip_dir / filename)
+            cutter.cut_clip(
+                src.path, c.start, c.end, ass_path, clip_dir / filename,
+                framing=job.framing,
+            )
             results.append(
                 asdict(
                     ClipResult(

@@ -76,6 +76,37 @@ def _window_score(segments: list[Segment]) -> float:
     return sum(_segment_score(s) for s in segments)
 
 
+def _trim_dead_edges(segs: list[Segment], i: int, j: int) -> tuple[int, int]:
+    """Retire les segments sans aucun intérêt en début et fin de fenêtre
+    (le recalage sur le début du sujet se fait ensuite via les pauses)."""
+    while i < j - 1 and _segment_score(segs[i]) <= 0:
+        i += 1
+    while j - 1 > i and _segment_score(segs[j - 1]) <= 0:
+        j -= 1
+    return i, j
+
+
+def _snap_to_topic_start(segs: list[Segment], i: int, end_time: float,
+                         used: set[int], max_extra: float = 15.0,
+                         min_gap: float = 0.8) -> int:
+    """Recule le début du clip jusqu'au début de la prise de parole en cours
+    (la pause précédente marque généralement le début du sujet), pour éviter
+    de démarrer au milieu d'une phrase ou d'une explication."""
+    j = i
+    while j > 0:
+        prev = segs[j - 1]
+        if (j - 1) in used:
+            break
+        if segs[j].start - prev.end >= min_gap:
+            break  # pause : on est au début d'une prise de parole
+        if segs[i].start - prev.start > max_extra:
+            break
+        if end_time - prev.start > config.CLIP_MAX_DURATION:
+            break
+        j -= 1
+    return j
+
+
 def analyze_free(transcript: Transcript, video_title: str, duration: float,
                  max_clips: int | None = None) -> analyzer.ClipPlan:
     max_clips = max_clips or config.MAX_CLIPS
@@ -103,6 +134,8 @@ def analyze_free(transcript: Transcript, video_title: str, duration: float,
 
     # --- 1. le meilleur passage devient une série Partie 1/2 s'il s'étire
     _, bi, bj = candidates[0]
+    bi, bj = _trim_dead_edges(segs, bi, bj)
+    bi = _snap_to_topic_start(segs, bi, segs[bj - 1].end, used)
     series = _try_extend_series(segs, bi, bj, used)
     if series:
         clips.extend(series[:max_clips])
@@ -116,6 +149,9 @@ def analyze_free(transcript: Transcript, video_title: str, duration: float,
             break
         if any(k in used for k in range(i, j)):
             continue
+        # retire le vide en bordure puis recule au début du sujet (pause)
+        i, j = _trim_dead_edges(segs, i, j)
+        i = _snap_to_topic_start(segs, i, segs[j - 1].end, used)
         used.update(range(i, j))
         window = segs[i:j]
         clips.append(

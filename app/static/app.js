@@ -23,6 +23,7 @@ if (form) {
         body: JSON.stringify({
           url: fd.get("url"),
           mode: fd.get("mode"),
+          framing: fd.get("framing"),
           max_clips: fd.get("max_clips"),
           language: fd.get("language"),
           manual_clips: fd.get("manual_clips"),
