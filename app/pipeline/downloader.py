@@ -1,6 +1,7 @@
 """Téléchargement de la vidéo source via yt-dlp (YouTube, Twitch, Vimeo, ...)."""
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,19 +9,24 @@ from pathlib import Path
 def _to_netscape(cookies_text: str) -> str:
     """Accepte soit un fichier cookies.txt (format Netscape, avec tabulations),
     soit la valeur brute de l'en-tête "cookie:" copiée depuis les outils de
-    développement (format "NOM=valeur; NOM2=valeur2; ...") qu'on convertit."""
+    développement (format "NOM=valeur; NOM2=valeur2; ...") qu'on convertit.
+    Tolère le mot « cookie » collé devant la valeur et les retours à la ligne."""
     txt = cookies_text.strip()
-    if txt.lower().startswith("cookie:"):
-        txt = txt[len("cookie:"):].strip()
     if "\t" in txt or txt.startswith("# Netscape"):
         return txt  # déjà au format Netscape
+
+    # retire un éventuel préfixe "cookie" / "cookie:" (nom de l'en-tête copié
+    # avec sa valeur) et les retours à la ligne dus au retour automatique
+    txt = re.sub(r"^\s*cookies?\s*:?\s*", "", txt, flags=re.IGNORECASE)
+    txt = " ".join(txt.split())
 
     lines = ["# Netscape HTTP Cookie File"]
     for pair in txt.split(";"):
         name, sep, value = pair.strip().partition("=")
-        if not sep or not name:
+        name = name.strip()
+        if not sep or not name or " " in name:
             continue
-        lines.append(f".youtube.com\tTRUE\t/\tTRUE\t2147483647\t{name}\t{value}")
+        lines.append(f".youtube.com\tTRUE\t/\tTRUE\t2147483647\t{name}\t{value.strip()}")
     return "\n".join(lines) + "\n"
 
 
@@ -64,8 +70,16 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
     cookies = os.getenv("YTDLP_COOKIES")
     if cookies and cookies.strip():
         cookie_file = dest_dir / ".cookies.txt"
-        cookie_file.write_text(_to_netscape(cookies), encoding="utf-8")
+        content = _to_netscape(cookies)
+        cookie_file.write_text(content, encoding="utf-8")
         opts["cookiefile"] = str(cookie_file)
+        n = sum(1 for line in content.splitlines() if "\t" in line)
+        names = [line.split("\t")[5] for line in content.splitlines() if line.count("\t") >= 6]
+        essentials = [c for c in ("SID", "__Secure-3PSID", "LOGIN_INFO") if c in names]
+        print(f"🍪 {n} cookies chargés (essentiels présents : {', '.join(essentials) or 'AUCUN ⚠️'})",
+              flush=True)
+    else:
+        print("🍪 Aucun cookie fourni (YTDLP_COOKIES vide)", flush=True)
 
     def _attempt(o):
         with yt_dlp.YoutubeDL(o) as ydl:
