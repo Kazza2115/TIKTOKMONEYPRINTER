@@ -84,7 +84,19 @@ Les sous-titres karaoké sont générés dans tous les cas (la transcription tou
 
 Sans rien installer : ouvre le notebook, exécute les 3 cellules, et tu obtiens une URL publique temporaire vers l'app (protégée par mot de passe). Il te faut juste un compte Google et ta clé API Claude. Active le GPU (*Exécution → Modifier le type d'exécution → T4*) pour une transcription rapide.
 
-## ⚙️ Générer des clips directement sur GitHub (sans serveur) — le plus simple
+## 📱 L'application web (GitHub Pages) — recommandé
+
+Une page avec un lien fixe, utilisable depuis ton téléphone ou n'importe où, qui pilote la génération sur GitHub. Configuration une seule fois :
+
+**1. Active GitHub Pages** : repo → **Settings → Pages** → Source : **Deploy from a branch** → Branch : `claude/tiktok-clip-generator-31rslv`, dossier **/docs** → Save. Ton lien : `https://kazza2115.github.io/TIKTOKMONEYPRINTER/` (actif après ~2 min).
+
+**2. Crée un token d'accès** (c'est la « clé » qui autorise la page à lancer les générations) : [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new) → Repository access : **Only select repositories → TIKTOKMONEYPRINTER** → Permissions → Repository permissions → **Actions : Read and write** → Generate token → copie le `github_pat_...`
+
+**3. Ouvre ton lien** et colle le token (mémorisé sur l'appareil). Sur téléphone : menu du navigateur → **« Ajouter à l'écran d'accueil »** pour l'utiliser comme une vraie appli.
+
+Ensuite : colle une URL → 🚀 Générer → la page suit la progression → à la fin, ouvre le run pour lire le résumé (hooks, légendes) et télécharger le **zip « clips »** (section Artifacts en bas de page).
+
+## ⚙️ Générer des clips directement depuis l'onglet Actions (sans la page)
 
 Aucun hébergement à configurer : le pipeline tourne sur les serveurs de GitHub Actions, gratuitement.
 

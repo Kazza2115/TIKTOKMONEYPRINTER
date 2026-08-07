@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TikTok Money Printer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0d0d12">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0d0d12; --card:#16161f; --border:#2a2a38; --text:#f0f0f5;
+  --muted:#8a8a9a; --accent:#ff2d55; --accent2:#ffd60a; --ok:#30d158; --err:#ff453a;
+}
+body { background:var(--bg); color:var(--text); font-family:-apple-system,"Segoe UI",Roboto,sans-serif; min-height:100vh; }
+header { padding:16px 20px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg); z-index:5; }
+.logo { font-weight:800; font-size:1.15rem; }
+.logo span { color:var(--accent); }
+main { max-width:640px; margin:0 auto; padding:18px 14px 90px; display:flex; flex-direction:column; gap:16px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; }
+h1 { font-size:1.25rem; margin-bottom:6px; }
+h2 { font-size:1.02rem; margin-bottom:10px; }
+.muted { color:var(--muted); } .small { font-size:.82rem; } .hidden { display:none; }
+.error { color:var(--err); margin-top:8px; font-size:.9rem; }
+.okmsg { color:var(--ok); margin-top:8px; font-size:.9rem; }
+form, .stack { display:flex; flex-direction:column; gap:13px; margin-top:12px; }
+label { display:flex; flex-direction:column; gap:5px; font-size:.88rem; font-weight:600; }
+.row { display:flex; gap:10px; } .row label { flex:1; min-width:0; }
+input, select, textarea { background:#0f0f16; border:1px solid var(--border); border-radius:9px; color:var(--text); padding:12px; font-size:16px; font-family:inherit; width:100%; }
+input:focus, select:focus, textarea:focus { outline:1px solid var(--accent); }
+button { background:var(--accent); color:#fff; border:none; border-radius:11px; padding:14px; font-size:1rem; font-weight:700; cursor:pointer; width:100%; }
+button.secondary { background:var(--border); font-size:.85rem; padding:10px; }
+button:disabled { opacity:.5; }
+.status-line { display:flex; align-items:center; gap:10px; padding:12px; border:1px solid var(--border); border-radius:10px; margin-top:8px; flex-wrap:wrap; }
+.dot { width:10px; height:10px; border-radius:50%; background:var(--muted); flex-shrink:0; }
+.dot.running { background:var(--accent2); animation:pulse 1s infinite; }
+.dot.success { background:var(--ok); } .dot.failure { background:var(--err); }
+@keyframes pulse { 50% { opacity:.35; } }
+a { color:var(--accent2); }
+.runs { list-style:none; display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.runs a { display:flex; gap:8px; align-items:center; padding:10px 12px; border:1px solid var(--border); border-radius:10px; color:var(--text); text-decoration:none; font-size:.87rem; flex-wrap:wrap; }
+.badge { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--border); text-transform:uppercase; }
+details { margin-top:10px; } summary { cursor:pointer; font-size:.85rem; color:var(--muted); }
+code { background:#0f0f16; padding:2px 5px; border-radius:4px; font-size:.85em; }
+</style>
+</head>
+<body>
+<header><div class="logo">🎬 TikTok<span>MoneyPrinter</span></div></header>
+<main>
+
+<!-- CONNEXION -->
+<section class="card" id="setup-card">
+  <h2>🔑 Connexion à ton GitHub</h2>
+  <p class="muted small">À faire une seule fois par appareil. Crée un token :
+    <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">github.com/settings/personal-access-tokens/new</a> —
+    Repository access : <b>Only select repositories → TIKTOKMONEYPRINTER</b> ·
+    Permissions → Repository permissions → <b>Actions : Read and write</b> → Generate.</p>
+  <div class="stack">
+    <label>Ton token GitHub
+      <input type="password" id="token-input" placeholder="github_pat_..." autocomplete="off">
+    </label>
+    <button id="save-token">Enregistrer</button>
+    <p id="setup-msg" class="hidden"></p>
+  </div>
+</section>
+
+<!-- FORMULAIRE -->
+<section class="card hidden" id="form-card">
+  <h1>Nouvelle vidéo</h1>
+  <p class="muted small">Colle une URL, GitHub fabrique tes clips (~5-10 min).</p>
+  <form id="gen-form">
+    <label>URL de la vidéo
+      <input type="url" id="f-url" placeholder="https://www.youtube.com/watch?v=..." required>
+    </label>
+    <div class="row">
+      <label>Mode
+        <select id="f-mode">
+          <option value="auto_free">🆓 Auto gratuit</option>
+          <option value="ai">🤖 IA</option>
+          <option value="manual">✂️ Manuel</option>
+        </select>
+      </label>
+      <label>Cadrage
+        <select id="f-framing">
+          <option value="fit">🌫️ Fond flou</option>
+          <option value="crop">🔍 Zoom</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label>Durée min (s)<input type="number" id="f-min" value="60" min="5" max="600"></label>
+      <label>Durée max (s)<input type="number" id="f-max" value="180" min="10" max="600"></label>
+      <label>Nb clips<input type="number" id="f-nb" value="5" min="1" max="10"></label>
+    </div>
+    <label id="manual-wrap" class="hidden">Clips manuels (un par ligne)
+      <textarea id="f-manual" rows="3" placeholder="0:42-1:52 | MON HOOK | ma légende #tag"></textarea>
+    </label>
+    <button type="submit" id="go-btn">🚀 Générer les clips</button>
+    <p id="form-msg" class="hidden"></p>
+  </form>
+
+  <div id="tracking" class="hidden">
+    <div class="status-line">
+      <span class="dot" id="track-dot"></span>
+      <span id="track-text">En attente...</span>
+      <a id="track-link" target="_blank" class="hidden">ouvrir ↗</a>
+    </div>
+    <p id="track-help" class="muted small hidden" style="margin-top:8px">
+      ✅ Terminé ! Ouvre le run ci-dessus : le résumé (hooks, légendes) est sur la page,
+      et le <b>zip « clips »</b> est tout en bas, section <b>Artifacts</b>.
+    </p>
+  </div>
+</section>
+
+<!-- HISTORIQUE -->
+<section class="card hidden" id="history-card">
+  <h2>Historique</h2>
+  <ul class="runs" id="runs-list"></ul>
+  <details>
+    <summary>⚙️ Changer de token</summary>
+    <button class="secondary" id="reset-token" style="margin-top:8px">Déconnecter cet appareil</button>
+  </details>
+</section>
+
+</main>
+<script>
+const OWNER = "Kazza2115";
+const REPO = "TIKTOKMONEYPRINTER";
+const BRANCH = "claude/tiktok-clip-generator-31rslv";
+const WORKFLOW = "generate-clips.yml";
+const API = `https://api.github.com/repos/${OWNER}/${REPO}`;
+
+const $ = (id) => document.getElementById(id);
+let token = localStorage.getItem("gh_token") || "";
+let pollTimer = null;
+
+function headers() {
+  return { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" };
+}
+
+function show(el, visible) { el.classList.toggle("hidden", !visible); }
+
+function setMsg(el, text, ok) {
+  el.textContent = text;
+  el.className = ok ? "okmsg" : "error";
+  show(el, true);
+}
+
+async function validateToken() {
+  const r = await fetch(API, { headers: headers() });
+  return r.ok;
+}
+
+function enterApp() {
+  show($("setup-card"), false);
+  show($("form-card"), true);
+  show($("history-card"), true);
+  loadHistory();
+}
+
+// --- connexion ---
+$("save-token").addEventListener("click", async () => {
+  token = $("token-input").value.trim();
+  if (!token) return setMsg($("setup-msg"), "Colle ton token d'abord.", false);
+  $("save-token").disabled = true;
+  if (await validateToken()) {
+    localStorage.setItem("gh_token", token);
+    setMsg($("setup-msg"), "✅ Connecté !", true);
+    setTimeout(enterApp, 400);
+  } else {
+    setMsg($("setup-msg"), "Token invalide ou sans accès au repo. Vérifie les permissions (Actions : Read and write).", false);
+  }
+  $("save-token").disabled = false;
+});
+
+$("reset-token").addEventListener("click", () => {
+  localStorage.removeItem("gh_token");
+  location.reload();
+});
+
+// --- formulaire ---
+$("f-mode").addEventListener("change", () => {
+  show($("manual-wrap"), $("f-mode").value === "manual");
+});
+
+$("gen-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("go-btn");
+  btn.disabled = true; btn.textContent = "⏳ Lancement...";
+  show($("form-msg"), false);
+
+  const inputs = {
+    url: $("f-url").value.trim(),
+    mode: $("f-mode").value,
+    framing: $("f-framing").value,
+    min_duration: $("f-min").value,
+    max_duration: $("f-max").value,
+    max_clips: $("f-nb").value,
+    language: "",
+    manual_clips: $("f-manual").value.trim().split("\n").filter(Boolean).join(" ;; "),
+  };
+
+  const r = await fetch(`${API}/actions/workflows/${WORKFLOW}/dispatches`, {
+    method: "POST",
+    headers: { ...headers(), "Content-Type": "application/json" },
+    body: JSON.stringify({ ref: BRANCH, inputs }),
+  });
+
+  if (r.status === 204) {
+    show($("tracking"), true);
+    show($("track-help"), false);
+    $("track-dot").className = "dot running";
+    $("track-text").textContent = "Démarrage sur GitHub...";
+    trackNewRun(Date.now());
+  } else {
+    const body = await r.text();
+    setMsg($("form-msg"), `Erreur ${r.status} : ${body.slice(0, 200)}`, false);
+  }
+  btn.disabled = false; btn.textContent = "🚀 Générer les clips";
+});
+
+// --- suivi du run ---
+async function latestRuns(n = 5) {
+  const r = await fetch(`${API}/actions/workflows/${WORKFLOW}/runs?per_page=${n}`, { headers: headers() });
+  if (!r.ok) return [];
+  return (await r.json()).workflow_runs || [];
+}
+
+function trackNewRun(sinceMs) {
+  if (pollTimer) clearInterval(pollTimer);
+  const started = sinceMs - 90000;
+  pollTimer = setInterval(async () => {
+    const runs = await latestRuns(3);
+    const run = runs.find((x) => new Date(x.created_at).getTime() >= started);
+    if (!run) return;
+    const link = $("track-link");
+    link.href = run.html_url; show(link, true);
+    const mins = Math.round((Date.now() - new Date(run.created_at)) / 60000);
+    if (run.status === "completed") {
+      clearInterval(pollTimer);
+      loadHistory();
+      if (run.conclusion === "success") {
+        $("track-dot").className = "dot success";
+        $("track-text").textContent = "Clips prêts ! 🎉";
+        show($("track-help"), true);
+      } else {
+        $("track-dot").className = "dot failure";
+        $("track-text").textContent = "Échec — ouvre le run pour voir l'erreur (et envoie-la à Claude 😉)";
+      }
+    } else {
+      $("track-dot").className = "dot running";
+      $("track-text").textContent = `Génération en cours... (${mins} min)`;
+    }
+  }, 8000);
+}
+
+// --- historique ---
+async function loadHistory() {
+  const runs = await latestRuns(6);
+  const list = $("runs-list");
+  list.innerHTML = "";
+  if (!runs.length) {
+    list.innerHTML = '<li class="muted small">Aucune génération pour l\'instant.</li>';
+    return;
+  }
+  for (const run of runs) {
+    const li = document.createElement("li");
+    const emoji = run.status !== "completed" ? "🟡" : run.conclusion === "success" ? "🟢" : "🔴";
+    const date = new Date(run.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    li.innerHTML = `<a href="${run.html_url}" target="_blank">${emoji}
+      <span class="badge">${run.status === "completed" ? run.conclusion : run.status}</span>
+      <span>${date}</span><span class="muted small">→ clips + résumé ↗</span></a>`;
+    list.appendChild(li);
+  }
+}
+
+// --- démarrage ---
+(async () => {
+  if (token && (await validateToken())) enterApp();
+  else if (token) { localStorage.removeItem("gh_token"); }
+})();
+</script>
+</body>
+</html>

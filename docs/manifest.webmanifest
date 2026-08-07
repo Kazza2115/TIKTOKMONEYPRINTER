@@ -1,0 +1,16 @@
+{
+  "name": "TikTok Money Printer",
+  "short_name": "ClipMaker",
+  "description": "Transforme tes vidéos en clips TikTok",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d0d12",
+  "theme_color": "#0d0d12",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230d0d12'/><text x='50' y='68' font-size='55' text-anchor='middle'>🎬</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
