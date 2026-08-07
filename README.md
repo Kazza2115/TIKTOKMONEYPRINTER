@@ -1,3 +1,13 @@
+---
+title: TikTok Money Printer
+emoji: 🎬
+colorFrom: red
+colorTo: yellow
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🎬 TikTok Money Printer
 
 Transforme n'importe quelle vidéo longue (YouTube, Twitch, Vimeo…) en clips TikTok prêts à poster :
@@ -74,7 +84,32 @@ Les sous-titres karaoké sont générés dans tous les cas (la transcription tou
 
 Sans rien installer : ouvre le notebook, exécute les 3 cellules, et tu obtiens une URL publique temporaire vers l'app (protégée par mot de passe). Il te faut juste un compte Google et ta clé API Claude. Active le GPU (*Exécution → Modifier le type d'exécution → T4*) pour une transcription rapide.
 
-## 🌐 Déploiement en ligne (Render)
+## 🌐 Site permanent gratuit (Hugging Face Spaces) — recommandé
+
+URL fixe, gratuit, et **mise à jour automatique à chaque modification du code sur GitHub**. Configuration en ~10 minutes, une seule fois :
+
+**1. Crée le Space (hébergement gratuit)**
+- Compte gratuit sur [huggingface.co](https://huggingface.co) (pas de carte bancaire)
+- [Créer un Space](https://huggingface.co/new-space) : nom `tiktokmoneyprinter`, licence au choix, SDK **Docker** (Blank), visibilité **Private** (recommandé : toi seul y accèdes)
+
+**2. Crée un token d'accès**
+- [Settings → Access Tokens](https://huggingface.co/settings/tokens) → **Create new token** → type **Write** → copie le token (`hf_...`)
+
+**3. Branche GitHub sur le Space** (dans ton repo GitHub → **Settings → Secrets and variables → Actions**)
+- Onglet **Secrets** → New repository secret : nom `HF_TOKEN`, valeur = ton token
+- Onglet **Variables** → New repository variable : nom `HF_SPACE`, valeur = `ton-pseudo/tiktokmoneyprinter`
+
+**4. Configure le Space** (page du Space → **Settings → Variables and secrets**)
+- Secret `ANTHROPIC_API_KEY` (optionnel — pour le mode IA)
+- Secret `APP_PASSWORD` (optionnel si le Space est privé)
+- Secret `YTDLP_COOKIES` (contenu de ton export cookies.txt — pour débloquer YouTube)
+- Variable `WHISPER_MODEL` = `small` (les Spaces ont 16 Go de RAM, autant en profiter)
+
+C'est tout. Le prochain push GitHub déclenche le déploiement (~5 min de build), et ensuite **chaque modification du code met le site à jour automatiquement**. Ton app est sur la page du Space, ou en direct : `https://ton-pseudo-tiktokmoneyprinter.hf.space`.
+
+À savoir : le Space s'endort après ~48 h sans visite (il se réveille en ~1 min à la première visite), les fichiers générés sont effacés au redémarrage (télécharge tes clips), et YouTube bloque aussi ces serveurs (d'où le secret `YTDLP_COOKIES`).
+
+## 🌐 Alternative : Render (payant, plus robuste)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Kazza2115/TIKTOKMONEYPRINTER)
 
