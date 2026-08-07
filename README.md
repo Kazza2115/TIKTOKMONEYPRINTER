@@ -84,7 +84,23 @@ Les sous-titres karaoké sont générés dans tous les cas (la transcription tou
 
 Sans rien installer : ouvre le notebook, exécute les 3 cellules, et tu obtiens une URL publique temporaire vers l'app (protégée par mot de passe). Il te faut juste un compte Google et ta clé API Claude. Active le GPU (*Exécution → Modifier le type d'exécution → T4*) pour une transcription rapide.
 
-## 📱 L'application web (GitHub Pages) — recommandé
+## ⭐ Sur ton PC, accessible partout depuis ton téléphone — LE plus fiable
+
+C'est **la** solution recommandée pour YouTube : ton PC télécharge avec ton adresse IP maison (jamais bloquée par YouTube, contrairement aux serveurs cloud), et un tunnel te donne un **lien public** ouvrable depuis ton téléphone n'importe où. Seule condition : le PC allumé quand tu bosses.
+
+**Prérequis (une seule fois) :** installe [Python](https://www.python.org/downloads/) en cochant **« Add Python to PATH »**. (Pas besoin d'installer ffmpeg : il est fourni automatiquement.)
+
+**Mise en route :**
+1. Télécharge le projet : sur la page GitHub → bouton vert **Code → Download ZIP** → décompresse le dossier
+2. Double-clique **`start.bat`** (Windows) ou **`start.command`** (Mac)
+3. Au tout premier lancement, il crée un fichier `.env` : ouvre-le avec le Bloc-notes, mets ta clé `ANTHROPIC_API_KEY=sk-ant-...` et un `APP_PASSWORD=tonmotdepasse`, enregistre, puis relance `start.bat`
+4. Une adresse **`https://....trycloudflare.com`** s'affiche → ouvre-la sur ton téléphone, entre le mot de passe → tu as l'appli, où que tu sois
+
+Sur téléphone : menu du navigateur → **« Ajouter à l'écran d'accueil »** pour l'avoir comme une vraie appli.
+
+> ℹ️ Le lien change à chaque redémarrage du PC (tunnel gratuit). Si tu veux un **lien fixe permanent**, c'est possible aussi (Cloudflare Tunnel nommé ou Tailscale Funnel, gratuits) — demande-le et je te guide.
+
+## 📱 L'application web (GitHub Pages) — pour piloter depuis le cloud
 
 Une page avec un lien fixe, utilisable depuis ton téléphone ou n'importe où, qui pilote la génération sur GitHub. Configuration une seule fois :
 

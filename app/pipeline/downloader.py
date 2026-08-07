@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from .. import config
+
 
 def _to_netscape(cookies_text: str) -> str:
     """Accepte soit un fichier cookies.txt (format Netscape, avec tabulations),
@@ -65,6 +67,7 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
         "progress_hooks": [hook],
         # clients les plus résistants à la détection anti-bot de YouTube
         "extractor_args": {"youtube": {"player_client": ["tv", "web_safari", "web"]}},
+        "ffmpeg_location": config.FFMPEG,
     }
 
     # En hébergement cloud, YouTube bloque souvent les IP de datacenter

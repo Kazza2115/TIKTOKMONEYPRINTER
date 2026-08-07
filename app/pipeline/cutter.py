@@ -7,9 +7,11 @@ Deux cadrages :
 - "crop" : plein écran zoomé, recadrage centré (coupe les côtés)
 """
 
-import shutil
+import os
 import subprocess
 from pathlib import Path
+
+from .. import config
 
 # recadrage centré vers 9:16 (mode "crop")
 CROP_916 = (
@@ -20,10 +22,15 @@ CROP_916 = (
 
 
 def ensure_ffmpeg():
-    if shutil.which("ffmpeg") is None:
+    exe = config.FFMPEG
+    ok = os.path.isfile(exe) or (
+        __import__("shutil").which(exe) is not None
+    )
+    if not ok:
         raise RuntimeError(
-            "ffmpeg introuvable. Installe-le d'abord (Windows : winget install ffmpeg / "
-            "scoop install ffmpeg ; Debian/Ubuntu : sudo apt install ffmpeg)."
+            "ffmpeg introuvable. Il est normalement fourni automatiquement par "
+            "imageio-ffmpeg (pip install -r requirements.txt). En dernier recours : "
+            "Windows → winget install ffmpeg ; Debian/Ubuntu → sudo apt install ffmpeg."
         )
 
 
@@ -62,7 +69,7 @@ def cut_clip(
     ensure_ffmpeg()
 
     cmd = [
-        "ffmpeg",
+        config.FFMPEG,
         "-y",
         "-ss", f"{start:.3f}",
         "-to", f"{end:.3f}",
