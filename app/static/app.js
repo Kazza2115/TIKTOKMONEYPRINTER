@@ -24,6 +24,8 @@ if (form) {
           url: fd.get("url"),
           mode: fd.get("mode"),
           framing: fd.get("framing"),
+          min_duration: fd.get("min_duration"),
+          max_duration: fd.get("max_duration"),
           max_clips: fd.get("max_clips"),
           language: fd.get("language"),
           manual_clips: fd.get("manual_clips"),

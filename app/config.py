@@ -20,6 +20,7 @@ WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
 WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "auto")
 MAX_CLIPS = int(os.getenv("MAX_CLIPS", "5"))
 
-# Contraintes de durée des clips (secondes)
-CLIP_MIN_DURATION = 12
-CLIP_MAX_DURATION = 62  # au-delà, l'IA doit découper en Partie 1/2/...
+# Contraintes de durée des clips par défaut (secondes) — modifiables par job
+# dans l'interface. Min 60 s par défaut : TikTok ne monétise qu'à partir d'1 min.
+CLIP_MIN_DURATION = int(os.getenv("CLIP_MIN_DURATION", "60"))
+CLIP_MAX_DURATION = int(os.getenv("CLIP_MAX_DURATION", "180"))  # au-delà : Partie 1/2/...

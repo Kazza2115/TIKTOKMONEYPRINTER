@@ -32,6 +32,17 @@
       </label>
     </div>
 
+    <div class="row">
+      <label>Durée min (s)
+        <input type="number" name="min_duration" value="60" min="5" max="600">
+        <span class="muted small">TikTok monétise à partir d'1 min</span>
+      </label>
+      <label>Durée max (s)
+        <input type="number" name="max_duration" value="180" min="10" max="600">
+        <span class="muted small">au-delà : découpage en Partie 1/2</span>
+      </label>
+    </div>
+
     <label id="manual-block" class="hidden">Clips manuels — un par ligne :
       <span class="muted small">format : <code>1:23-1:55 | HOOK OPTIONNEL | légende optionnelle</code></span>
       <textarea name="manual_clips" rows="4" placeholder="0:42-1:12 | IL A TOUT PERDU EN 30 SECONDES | La suite en partie 2 👀 #storytime"></textarea>

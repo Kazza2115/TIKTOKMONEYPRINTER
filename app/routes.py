@@ -44,9 +44,22 @@ def api_create_job():
     if framing not in ("fit", "crop"):
         framing = "fit"
 
+    def _dur(key, default):
+        try:
+            v = int(data.get(key) or 0)
+        except (TypeError, ValueError):
+            return default
+        return max(5, min(600, v)) if v else default
+
+    min_duration = _dur("min_duration", 0)
+    max_duration = _dur("max_duration", 0)
+    if min_duration and max_duration and max_duration <= min_duration:
+        return jsonify({"error": "La durée max doit être supérieure à la durée min."}), 400
+
     job = jobs.create_job(
         url, mode=mode, manual_clips=manual_clips, language=language,
         max_clips=max_clips, framing=framing,
+        min_duration=min_duration, max_duration=max_duration,
     )
     return jsonify(job.to_dict()), 201
 

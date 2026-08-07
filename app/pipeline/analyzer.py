@@ -44,7 +44,12 @@ SÉRIES MULTI-PARTIES (Partie 1 / Partie 2 / ...) :
 - Renseigne cliffhanger avec la phrase exacte du transcript sur laquelle couper (fin de la partie).
 
 CONTRAINTES TECHNIQUES :
-- Durée d'un clip : entre {min_dur} et {max_dur} secondes. Idéal : 20 à 45 secondes.
+- Durée d'un clip : entre {min_dur} et {max_dur} secondes — c'est une contrainte DURE
+  (en dessous de {min_dur}s le clip est inutilisable : monétisation). Si le meilleur moment est
+  plus court que {min_dur}s, étends le clip au passage qui l'entoure (contexte avant, réaction
+  après) pour atteindre la durée minimale en restant cohérent.
+- Si la vidéo entière tient dans la durée max et qu'elle est bonne, un clip couvrant presque
+  toute la vidéo est parfaitement valide.
 - Les timestamps start/end doivent correspondre à des débuts/fins de phrases du transcript
   (utilise les bornes [start-end] fournies). Ne coupe jamais un mot en deux.
 - hook_text : le texte incrusté en haut du clip pendant les premières secondes. Court (max 8 mots),
@@ -79,7 +84,8 @@ class ClipPlan(BaseModel):
 
 
 def analyze(transcript: Transcript, video_title: str, duration: float,
-            max_clips: int | None = None) -> ClipPlan:
+            max_clips: int | None = None, min_dur: int | None = None,
+            max_dur: int | None = None) -> ClipPlan:
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         raise RuntimeError(
@@ -95,9 +101,12 @@ def analyze(transcript: Transcript, video_title: str, duration: float,
     max_clips = max_clips or config.MAX_CLIPS
     client = Anthropic()
 
+    min_dur = min_dur or config.CLIP_MIN_DURATION
+    max_dur = max_dur or config.CLIP_MAX_DURATION
+
     system = SYSTEM_PROMPT.format(
-        min_dur=config.CLIP_MIN_DURATION,
-        max_dur=config.CLIP_MAX_DURATION,
+        min_dur=min_dur,
+        max_dur=max_dur,
         max_clips=max_clips,
     )
 
@@ -146,16 +155,18 @@ def analyze(transcript: Transcript, video_title: str, duration: float,
     if plan is None:
         raise RuntimeError("Réponse du modèle invalide (parsing échoué). Réessaie.")
 
-    return _sanitize(plan, duration)
+    return _sanitize(plan, duration, min_dur=min_dur)
 
 
-def _sanitize(plan: ClipPlan, duration: float) -> ClipPlan:
+def _sanitize(plan: ClipPlan, duration: float, min_dur: int = 0) -> ClipPlan:
     """Borne les timestamps, filtre les clips invalides, renumérote les séries."""
+    # si la vidéo est plus courte que le min demandé, on prend ce qu'on peut
+    effective_min = max(3.0, min(float(min_dur), duration - 2.0))
     valid: list[ClipSuggestion] = []
     for c in plan.clips:
         c.start = max(0.0, min(c.start, duration))
         c.end = max(0.0, min(c.end, duration))
-        if c.end - c.start < 3:
+        if c.end - c.start < effective_min - 3.0:
             continue
         c.viral_score = max(0, min(100, c.viral_score))
         valid.append(c)
