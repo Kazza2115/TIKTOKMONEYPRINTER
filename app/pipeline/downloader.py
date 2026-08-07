@@ -32,6 +32,23 @@ def _to_netscape(cookies_text: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _list_formats(url: str, cookiefile) -> str:
+    """Renvoie une liste compacte des formats disponibles (pour diagnostic)."""
+    try:
+        import yt_dlp
+
+        o = {"quiet": True, "no_warnings": True, "skip_download": True}
+        if cookiefile:
+            o["cookiefile"] = str(cookiefile)
+        with yt_dlp.YoutubeDL(o) as ydl:
+            info = ydl.extract_info(url, download=False)
+        fmts = info.get("formats") or []
+        ids = sorted({f.get("format_id") for f in fmts if f.get("format_id")})
+        return ", ".join(ids[:25]) if ids else ""
+    except Exception:
+        return ""
+
+
 @dataclass
 class SourceVideo:
     path: Path
@@ -54,10 +71,7 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
             if total:
                 progress_cb(d.get("downloaded_bytes", 0) / total)
 
-    opts = {
-        # sélection souple : idéalement <=1080p, sinon la meilleure dispo,
-        # sinon n'importe quel format en dernier recours
-        "format": "bestvideo[height<=1080]+bestaudio/best[height<=1080]/bestvideo+bestaudio/best",
+    base = {
         "merge_output_format": "mp4",
         "outtmpl": str(dest_dir / "%(id)s.%(ext)s"),
         "noplaylist": True,
@@ -65,8 +79,6 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
         "no_warnings": True,
         "ignoreerrors": False,
         "progress_hooks": [hook],
-        # clients les plus résistants à la détection anti-bot de YouTube
-        "extractor_args": {"youtube": {"player_client": ["tv", "web_safari", "web"]}},
         "ffmpeg_location": config.FFMPEG,
     }
 
@@ -76,11 +88,11 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
     # soit directement la ligne "cookie:" copiée depuis les outils de
     # développement du navigateur (F12) — convertie automatiquement.
     cookies = os.getenv("YTDLP_COOKIES")
+    cookiefile = None
     if cookies and cookies.strip():
-        cookie_file = dest_dir / ".cookies.txt"
+        cookiefile = dest_dir / ".cookies.txt"
         content = _to_netscape(cookies)
-        cookie_file.write_text(content, encoding="utf-8")
-        opts["cookiefile"] = str(cookie_file)
+        cookiefile.write_text(content, encoding="utf-8")
         n = sum(1 for line in content.splitlines() if "\t" in line)
         names = [line.split("\t")[5] for line in content.splitlines() if line.count("\t") >= 6]
         essentials = [c for c in ("SID", "__Secure-3PSID", "LOGIN_INFO") if c in names]
@@ -89,45 +101,58 @@ def download(url: str, dest_dir: Path, progress_cb=None) -> SourceVideo:
     else:
         print("🍪 Aucun cookie fourni (YTDLP_COOKIES vide)", flush=True)
 
-    def _attempt(o):
+    def _attempt(clients, fmt):
+        o = dict(base)
+        o["extractor_args"] = {"youtube": {"player_client": clients}}
+        if fmt:
+            o["format"] = fmt
+        if cookiefile:
+            o["cookiefile"] = str(cookiefile)
         with yt_dlp.YoutubeDL(o) as ydl:
             info = ydl.extract_info(url, download=True)
             path = Path(ydl.prepare_filename(info))
-            # après merge, l'extension finale est mp4
             if not path.exists():
                 path = path.with_suffix(".mp4")
             if not path.exists():
                 raise FileNotFoundError(f"Fichier téléchargé introuvable pour {url}")
             return info, path
 
-    try:
-        info, path = _attempt(opts)
-    except yt_dlp.utils.DownloadError as e:
-        msg = str(e)
-        low = msg.lower()
-        blocked = "403" in msg or "forbidden" in low or "not a bot" in low
-        bad_format = "requested format" in low or "format is not available" in low
+    # cascade de configurations : on essaie plusieurs clients YouTube et
+    # plusieurs sélecteurs de format, du plus souhaitable au plus permissif
+    fmt_pref = "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
+    attempts = [
+        (["web_safari", "web"], fmt_pref),
+        (["mweb"], fmt_pref),
+        (["tv"], None),
+        (["web_safari"], None),
+        (["ios"], None),
+        (["default"], None),
+    ]
 
-        if blocked or bad_format:
-            # 2e essai : format le plus permissif + clients compatibles cookies.
-            # (le client "android" ignore les cookies : on ne l'utilise que
-            #  s'il n'y a PAS de cookies, sinon on garde les clients par défaut)
-            retry = dict(opts)
-            retry.pop("format", None)  # laisse yt-dlp choisir le meilleur défaut
-            if not opts.get("cookiefile"):
-                retry["extractor_args"] = {"youtube": {"player_client": ["android", "web"]}}
-            try:
-                info, path = _attempt(retry)
-            except yt_dlp.utils.DownloadError as e2:
-                if "403" in str(e2) or "forbidden" in str(e2).lower():
-                    raise RuntimeError(
-                        "Téléchargement bloqué par YouTube (403). Tes cookies sont "
-                        "probablement expirés : refais un export frais et mets à jour "
-                        "le secret YTDLP_COOKIES."
-                    ) from e2
-                raise RuntimeError(f"Téléchargement impossible : {str(e2)[:300]}") from e2
+    info = path = None
+    last_err = ""
+    for clients, fmt in attempts:
+        try:
+            info, path = _attempt(clients, fmt)
+            print(f"✅ Téléchargé via client(s) {', '.join(clients)}", flush=True)
+            break
+        except Exception as e:
+            last_err = str(e)
+            continue
+
+    if info is None:
+        # diagnostic : liste ce que YouTube expose réellement pour cette vidéo
+        available = _list_formats(url, cookiefile)
+        low = last_err.lower()
+        if "not a bot" in low or "sign in to confirm" in low or "403" in low or "forbidden" in low:
+            hint = ("YouTube a refusé (blocage anti-bot / cookies expirés depuis un "
+                    "serveur cloud). Refais un export de cookies TOUT frais.")
         else:
-            raise RuntimeError(f"Téléchargement impossible : {msg[:300]}") from e
+            hint = f"Formats vus par yt-dlp : {available or 'aucun'}."
+        raise RuntimeError(
+            f"Téléchargement impossible après plusieurs tentatives. {hint} "
+            f"Dernière erreur : {last_err[:200]}"
+        )
 
     return SourceVideo(
         path=path,
