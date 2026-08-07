@@ -98,7 +98,22 @@ C'est **la** solution recommandée pour YouTube : ton PC télécharge avec ton a
 
 Sur téléphone : menu du navigateur → **« Ajouter à l'écran d'accueil »** pour l'avoir comme une vraie appli.
 
-> ℹ️ Le lien change à chaque redémarrage du PC (tunnel gratuit). Si tu veux un **lien fixe permanent**, c'est possible aussi (Cloudflare Tunnel nommé ou Tailscale Funnel, gratuits) — demande-le et je te guide.
+> ℹ️ Le lien change à chaque redémarrage du PC (tunnel gratuit). Pour un **lien fixe permanent** — idéal si tu bosses depuis un PC verrouillé (travail) où tu ne peux rien installer — voir la section ci-dessous.
+
+## 🔒 Lien fixe permanent (bosser depuis un PC verrouillé / le travail)
+
+Idée : ton **PC perso à la maison** est le moteur (il télécharge avec ton IP maison, YouTube marche), et il expose un **lien fixe** que tu ouvres depuis **n'importe quel navigateur** (PC du travail, téléphone) — **rien à installer côté client**. Le PC maison doit rester allumé.
+
+On utilise **Tailscale Funnel** (gratuit, lien permanent `https://...ts.net`, sans nom de domaine).
+
+**Configuration sur ton PC maison (une seule fois) :**
+1. Crée un compte gratuit sur [tailscale.com](https://tailscale.com) et installe [Tailscale pour Windows](https://tailscale.com/download/windows), puis connecte-toi (icône dans la barre des tâches)
+2. Active Funnel dans la console d'admin :
+   - Va sur [login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns) → active **MagicDNS** et **HTTPS Certificates**
+   - Va sur [login.tailscale.com/admin/acls](https://login.tailscale.com/admin/acls) → dans les `nodeAttrs`, ajoute l'attribut `funnel` à ton appareil (Tailscale documente le bloc exact à coller ; en cas de doute, demande-moi et je te donne les lignes précises)
+3. Double-clique **`start-lien-fixe.bat`** — il démarre l'app et affiche ton lien fixe `https://<ton-pc>.<...>.ts.net`
+
+**Ensuite, depuis le PC du travail ou ton téléphone :** ouvre simplement ce lien dans le navigateur, entre ton `APP_PASSWORD`, et travaille. Le lien ne change jamais — mets-le en favori ou sur l'écran d'accueil.
 
 ## 📱 L'application web (GitHub Pages) — pour piloter depuis le cloud
 
