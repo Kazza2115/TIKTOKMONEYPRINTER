@@ -1,0 +1,93 @@
+# Génère des clips TikTok directement sur GitHub — sans serveur, gratuit.
+#
+# Utilisation : onglet Actions → « 🎬 Générer des clips » → Run workflow →
+# remplis le formulaire → à la fin, télécharge le zip « clips » en bas de la
+# page du run (section Artifacts).
+#
+# Secrets optionnels (Settings → Secrets and variables → Actions) :
+#   ANTHROPIC_API_KEY : pour le mode IA
+#   YTDLP_COOKIES     : contenu d'un export cookies.txt (débloque YouTube)
+
+name: 🎬 Générer des clips
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "URL de la vidéo (YouTube, Twitch, Vimeo...)"
+        required: true
+      mode:
+        description: "Mode de sélection"
+        type: choice
+        options: [auto_free, ai, manual]
+        default: auto_free
+      framing:
+        description: "Cadrage"
+        type: choice
+        options: [fit, crop]
+        default: fit
+      min_duration:
+        description: "Durée min d'un clip (s)"
+        default: "60"
+      max_duration:
+        description: "Durée max d'un clip (s)"
+        default: "180"
+      max_clips:
+        description: "Nombre max de clips"
+        default: "5"
+      language:
+        description: "Langue (vide = auto)"
+        default: ""
+      manual_clips:
+        description: "Mode manuel : 1:23-1:55 | HOOK | légende (plusieurs clips : séparer par ;;)"
+        default: ""
+
+jobs:
+  clips:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Dépendances
+        run: |
+          if ! command -v ffmpeg > /dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          fi
+          pip install -q -r requirements.txt
+
+      - name: Génération des clips
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          YTDLP_COOKIES: ${{ secrets.YTDLP_COOKIES }}
+          WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'small' }}
+          WHISPER_DEVICE: cpu
+        run: |
+          python cli.py "${{ inputs.url }}" \
+            --mode "${{ inputs.mode }}" \
+            --framing "${{ inputs.framing }}" \
+            --min-duration "${{ inputs.min_duration }}" \
+            --max-duration "${{ inputs.max_duration }}" \
+            --max-clips "${{ inputs.max_clips }}" \
+            --language "${{ inputs.language }}" \
+            --manual-clips "${{ inputs.manual_clips }}" \
+            --summary summary.md
+
+      - name: Résumé du run
+        if: always()
+        run: |
+          if [ -f summary.md ]; then cat summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Publication des clips (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: clips
+          path: |
+            data/clips/cli/*.mp4
+          retention-days: 7
+          if-no-files-found: error

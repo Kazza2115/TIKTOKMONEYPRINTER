@@ -84,7 +84,23 @@ Les sous-titres karaoké sont générés dans tous les cas (la transcription tou
 
 Sans rien installer : ouvre le notebook, exécute les 3 cellules, et tu obtiens une URL publique temporaire vers l'app (protégée par mot de passe). Il te faut juste un compte Google et ta clé API Claude. Active le GPU (*Exécution → Modifier le type d'exécution → T4*) pour une transcription rapide.
 
-## 🌐 Site permanent gratuit (Hugging Face Spaces) — recommandé
+## ⚙️ Générer des clips directement sur GitHub (sans serveur) — le plus simple
+
+Aucun hébergement à configurer : le pipeline tourne sur les serveurs de GitHub Actions, gratuitement.
+
+1. Onglet **Actions** du repo → workflow **« 🎬 Générer des clips »** → **Run workflow**
+2. Remplis le formulaire (URL, mode, cadrage, durées...) → **Run workflow**
+3. Attends ~5-10 min → ouvre le run → les clips sont dans le **zip « clips »** en bas de page (section *Artifacts*), et le résumé (hooks, légendes, scores) s'affiche directement sur la page du run
+
+Secrets optionnels (**Settings → Secrets and variables → Actions → Secrets**) :
+- `ANTHROPIC_API_KEY` — pour le mode IA
+- `YTDLP_COOKIES` — contenu d'un export cookies.txt pour débloquer YouTube (les serveurs GitHub sont aussi des IP datacenter)
+
+Limites : pas d'aperçu vidéo dans le navigateur (on télécharge le zip), et les artifacts sont gardés 7 jours. Pour une vraie page web permanente, voir Hugging Face Spaces ci-dessous.
+
+## 🌐 Site permanent gratuit (Hugging Face Spaces)
+
+> 💡 Au moment de créer le Space, choisis SDK **Docker → Blank** puis hardware **« CPU basic · 2 vCPU · 16 GB · FREE »** — c'est bien gratuit ; les prix affichés concernent les machines plus puissantes optionnelles.
 
 URL fixe, gratuit, et **mise à jour automatique à chaque modification du code sur GitHub**. Configuration en ~10 minutes, une seule fois :
 
