@@ -1,11 +1,10 @@
 // --- Recherche de vidéos virales ---
 const searchBtn = document.getElementById("search-btn");
 if (searchBtn) {
-  searchBtn.addEventListener("click", async () => {
+  async function runSearch(isRefresh) {
     const msg = document.getElementById("search-msg");
     const box = document.getElementById("search-results");
     msg.classList.add("hidden");
-    box.innerHTML = "";
     const query = document.getElementById("search-query").value.trim();
     if (!query) {
       msg.textContent = "Entre un thème de recherche.";
@@ -14,6 +13,7 @@ if (searchBtn) {
     }
     searchBtn.disabled = true;
     searchBtn.textContent = "⏳ Recherche...";
+    if (!isRefresh) box.innerHTML = "";
     try {
       const res = await fetch("/api/search", {
         method: "POST",
@@ -37,7 +37,9 @@ if (searchBtn) {
       searchBtn.disabled = false;
       searchBtn.textContent = "🔎 Rechercher";
     }
-  });
+  }
+  searchBtn.addEventListener("click", () => runSearch(false));
+  window.__refreshSearch = () => runSearch(true);
 }
 
 function fmtViews(n) {
@@ -56,7 +58,13 @@ function esc(s) {
 }
 
 function renderSearchResults(results, box) {
-  box.innerHTML = '<div class="search-grid"></div>';
+  box.innerHTML =
+    '<div class="search-head"><span class="muted small">' +
+    results.length +
+    ' vidéos</span><button type="button" class="secondary" id="refresh-btn">🔄 Rafraîchir</button></div>' +
+    '<div class="search-grid"></div>';
+  const rb = box.querySelector("#refresh-btn");
+  if (rb) rb.addEventListener("click", () => window.__refreshSearch && window.__refreshSearch());
   const grid = box.querySelector(".search-grid");
   results.forEach((v, i) => {
     const card = document.createElement("div");
@@ -77,6 +85,25 @@ function renderSearchResults(results, box) {
     });
     grid.appendChild(card);
   });
+}
+
+// --- Aperçu de la mise en page (hook / sous-titres) ---
+const preview = document.getElementById("preview");
+if (preview) {
+  const pvHook = document.getElementById("pv-hook");
+  function updatePreview() {
+    const font = document.querySelector('[name="font"]').value;
+    const pos = document.querySelector('[name="hook_position"]').value;
+    const lang = document.querySelector('[name="hook_lang"]').value;
+    preview.style.fontFamily = font + ", sans-serif";
+    pvHook.textContent = lang === "fr" ? "TON HOOK ICI" : "YOUR HOOK HERE";
+    pvHook.className = "pv-hook pv-" + pos;
+  }
+  ["font", "hook_position", "hook_lang"].forEach((n) => {
+    const el = document.querySelector('[name="' + n + '"]');
+    if (el) el.addEventListener("change", updatePreview);
+  });
+  updatePreview();
 }
 
 // --- Formulaire de création de job (page d'accueil) ---
