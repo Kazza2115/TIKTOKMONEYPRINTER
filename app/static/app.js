@@ -1,3 +1,85 @@
+// --- Recherche de vidéos virales ---
+const searchBtn = document.getElementById("search-btn");
+if (searchBtn) {
+  searchBtn.addEventListener("click", async () => {
+    const msg = document.getElementById("search-msg");
+    const box = document.getElementById("search-results");
+    msg.classList.add("hidden");
+    box.innerHTML = "";
+    const query = document.getElementById("search-query").value.trim();
+    if (!query) {
+      msg.textContent = "Entre un thème de recherche.";
+      msg.classList.remove("hidden");
+      return;
+    }
+    searchBtn.disabled = true;
+    searchBtn.textContent = "⏳ Recherche...";
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          duration: document.getElementById("search-duration").value,
+          recency_days: document.getElementById("search-recency").value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erreur");
+      if (!data.results.length) {
+        box.innerHTML = '<p class="muted small" style="margin-top:12px">Aucune vidéo trouvée. Essaie d\'autres mots-clés.</p>';
+        return;
+      }
+      renderSearchResults(data.results, box);
+    } catch (err) {
+      msg.textContent = err.message;
+      msg.classList.remove("hidden");
+    } finally {
+      searchBtn.disabled = false;
+      searchBtn.textContent = "🔎 Rechercher";
+    }
+  });
+}
+
+function fmtViews(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + "k";
+  return String(n);
+}
+function fmtDur(s) {
+  const m = Math.floor(s / 60);
+  return m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m} min`;
+}
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s || "";
+  return d.innerHTML;
+}
+
+function renderSearchResults(results, box) {
+  box.innerHTML = '<div class="search-grid"></div>';
+  const grid = box.querySelector(".search-grid");
+  results.forEach((v, i) => {
+    const card = document.createElement("div");
+    card.className = "search-card";
+    card.innerHTML = `
+      <img src="${v.thumbnail}" alt="" loading="lazy">
+      <div class="search-body">
+        <div class="viral-badge">🔥 ${fmtViews(v.views_per_day)}/jour</div>
+        <h4>${esc(v.title)}</h4>
+        <p class="muted small">${esc(v.channel)} · ${fmtViews(v.views)} vues · ${fmtDur(v.duration_sec)} · ${v.published}</p>
+        <button class="use-btn" type="button">✂️ Utiliser cette vidéo</button>
+      </div>`;
+    card.querySelector(".use-btn").addEventListener("click", () => {
+      const urlField = document.querySelector('#job-form [name="url"]');
+      urlField.value = v.url;
+      urlField.scrollIntoView({ behavior: "smooth", block: "center" });
+      urlField.focus();
+    });
+    grid.appendChild(card);
+  });
+}
+
 // --- Formulaire de création de job (page d'accueil) ---
 const form = document.getElementById("job-form");
 if (form) {

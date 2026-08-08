@@ -171,3 +171,13 @@ button:disabled { opacity: 0.5; cursor: wait; }
 .clip-actions a:hover, .clip-actions button:hover { background: var(--accent); }
 
 code { background: #0f0f16; padding: 2px 5px; border-radius: 4px; }
+
+.stack { display: flex; flex-direction: column; gap: 13px; }
+.search-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 16px; }
+.search-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.search-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #000; }
+.search-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.search-body h4 { font-size: 0.9rem; line-height: 1.25; }
+.viral-badge { align-self: flex-start; background: var(--accent2); color: #000; font-weight: 800; font-size: 0.75rem; padding: 3px 9px; border-radius: 999px; }
+.use-btn { background: var(--border); font-size: 0.85rem; padding: 9px; }
+.use-btn:hover { background: var(--accent); }

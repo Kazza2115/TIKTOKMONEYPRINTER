@@ -1,6 +1,36 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
+  <h2>🔎 Trouver une vidéo virale par thème</h2>
+  <p class="muted small">Cherche les vidéos qui cartonnent en ce moment sur un sujet, classées par vues/jour. Clique « Utiliser » pour l'envoyer dans le découpage.</p>
+  <div class="stack" style="margin-top:12px">
+    <label>Thème / mots-clés
+      <input type="text" id="search-query" placeholder="ex: mindset entrepreneur, storytime, football...">
+    </label>
+    <div class="row">
+      <label>Durée
+        <select id="search-duration">
+          <option value="long">Longues (&gt;20 min)</option>
+          <option value="medium">Moyennes (4-20 min)</option>
+          <option value="any">Toutes</option>
+        </select>
+      </label>
+      <label>Période
+        <select id="search-recency">
+          <option value="30">30 jours</option>
+          <option value="90">3 mois</option>
+          <option value="180" selected>6 mois</option>
+          <option value="0">Tout</option>
+        </select>
+      </label>
+    </div>
+    <button type="button" id="search-btn">🔎 Rechercher</button>
+    <p id="search-msg" class="error hidden"></p>
+  </div>
+  <div id="search-results"></div>
+</section>
+
+<section class="card">
   <h1>Transforme une vidéo longue en clips TikTok</h1>
   <p class="muted">Colle une URL (YouTube, Twitch, Vimeo…). L'IA repère les moments chauds,
     génère les hooks, les légendes, et découpe les longs passages en Partie 1 / Partie 2 avec cliffhanger.</p>

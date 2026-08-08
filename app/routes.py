@@ -1,6 +1,7 @@
 from flask import Blueprint, abort, jsonify, render_template, request, send_from_directory
 
 from . import config, jobs
+from .pipeline import youtube_search
 
 bp = Blueprint("main", __name__)
 
@@ -75,6 +76,24 @@ def api_get_job(job_id):
     if not job:
         abort(404)
     return jsonify(job.to_dict())
+
+
+@bp.post("/api/search")
+def api_search():
+    data = request.get_json(force=True)
+    query = (data.get("query") or "").strip()
+    duration = data.get("duration") or "long"
+    try:
+        recency = int(data.get("recency_days") or 180)
+    except (TypeError, ValueError):
+        recency = 180
+    try:
+        results = youtube_search.search(query, duration=duration, recency_days=recency)
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Recherche échouée : {e}"}), 502
+    return jsonify({"results": results})
 
 
 @bp.get("/clips/<job_id>/<path:filename>")

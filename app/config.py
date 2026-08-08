@@ -16,6 +16,7 @@ for d in (DOWNLOADS_DIR, CLIPS_DIR, JOBS_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-opus-5")
+YT_API_KEY = os.getenv("YT_API_KEY", "")
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
 WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "auto")
 MAX_CLIPS = int(os.getenv("MAX_CLIPS", "5"))
