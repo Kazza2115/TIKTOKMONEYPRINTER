@@ -8,6 +8,8 @@ echo   TikTok Money Printer - demarrage avec lien FIXE
 echo ============================================================
 echo.
 
+if exist ".git" call :update
+
 where python >nul 2>nul
 if errorlevel 1 goto no_python
 
@@ -45,6 +47,14 @@ echo   Laisse ce PC allume et cette fenetre ouverte quand tu bosses.
 echo.
 pause >nul
 goto end
+
+:update
+where git >nul 2>nul
+if errorlevel 1 goto :eof
+echo Mise a jour de l'application vers la derniere version...
+git pull --ff-only
+echo.
+goto :eof
 
 :make_venv
 echo Creation de l'environnement Python, premiere fois...

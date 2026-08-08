@@ -7,10 +7,10 @@ import os
 from dataclasses import asdict, dataclass
 
 DURATION_RANGES = {
-    "short": (30, 240),        # 30 s - 4 min
+    "short": (0, 240),         # jusqu'à 4 min (inclut les Shorts)
     "medium": (240, 1200),     # 4 - 20 min
     "long": (1200, 10 ** 9),   # > 20 min
-    "any": (30, 10 ** 9),
+    "any": (0, 10 ** 9),       # toutes durées
 }
 
 
@@ -79,7 +79,7 @@ def search(query: str, duration: str = "long", recency_days: int = 180,
         if not vid:
             continue
         dur = int(entry.get("duration") or 0)
-        if dur < lo or dur > hi:
+        if dur <= 0 or dur < lo or dur > hi:
             continue
         views = int(entry.get("view_count") or 0)
         # miniature fiable construite depuis l'ID
