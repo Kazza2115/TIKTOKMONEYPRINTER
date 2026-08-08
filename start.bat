@@ -9,54 +9,70 @@ echo ============================================================
 echo.
 
 where python >nul 2>nul
-if errorlevel 1 (
-  echo [ERREUR] Python n'est pas installe.
-  echo Installe-le depuis https://www.python.org/downloads/
-  echo    -^> coche bien "Add Python to PATH" pendant l'installation.
-  pause
-  exit /b 1
-)
+if errorlevel 1 goto no_python
 
-if not exist .venv (
-  echo Creation de l'environnement Python (une seule fois)...
-  python -m venv .venv
-)
+if not exist .venv call :make_venv
 call .venv\Scripts\activate
 
 echo Installation / mise a jour des dependances...
+echo Patiente, la premiere fois cela prend 3 a 5 minutes...
 python -m pip install -q --upgrade pip
 pip install -q -r requirements.txt
 pip install -q -U --pre "yt-dlp[default]"
 
-if not exist cloudflared.exe (
-  echo Telechargement de l'outil de tunnel (une seule fois)...
-  curl -L -s -o cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
-)
+if not exist cloudflared.exe call :get_cloudflared
+if not exist .env goto make_env
 
-if not exist .env (
-  copy .env.example .env >nul
-  echo.
-  echo ============================================================
-  echo   PREMIERE UTILISATION : configure ta cle et ton mot de passe
-  echo ------------------------------------------------------------
-  echo   1. Ouvre le fichier .env (dans ce dossier) avec le Bloc-notes
-  echo   2. Mets ta cle sur la ligne ANTHROPIC_API_KEY=sk-ant-...
-  echo   3. Choisis un mot de passe sur la ligne APP_PASSWORD=...
-  echo   4. Enregistre, ferme, et relance ce fichier start.bat
-  echo ============================================================
-  pause
-  exit /b 0
-)
-
+echo.
 echo Demarrage de l'application...
 start "TMP-serveur" /min cmd /c ".venv\Scripts\python run.py"
-
-echo Ouverture du tunnel public...
-echo.
-echo ============================================================
-echo   TON LIEN VA S'AFFICHER CI-DESSOUS (https://...trycloudflare.com)
-echo   Ouvre-le sur ton telephone. Laisse cette fenetre ouverte.
-echo ============================================================
-echo.
 timeout /t 5 >nul
+
+echo.
+echo ============================================================
+echo   TON LIEN VA S'AFFICHER CI-DESSOUS
+echo   Cherche la ligne https://xxxxx.trycloudflare.com
+echo   Ouvre-la sur ton telephone. Laisse cette fenetre ouverte.
+echo ============================================================
+echo.
 cloudflared.exe tunnel --url http://localhost:5000 --no-autoupdate
+echo.
+echo Le tunnel s'est arrete. Appuie sur une touche pour fermer.
+pause >nul
+goto end
+
+:make_venv
+echo Creation de l'environnement Python, premiere fois...
+python -m venv .venv
+goto :eof
+
+:get_cloudflared
+echo Telechargement de l'outil de tunnel, premiere fois...
+curl -L -s -o cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
+goto :eof
+
+:no_python
+echo [ERREUR] Python n'est pas installe, ou pas ajoute au PATH.
+echo Reinstalle Python depuis https://www.python.org/downloads/
+echo et coche bien la case "Add Python to PATH" au debut de l'installation.
+echo.
+pause >nul
+goto end
+
+:make_env
+copy .env.example .env >nul
+echo.
+echo ============================================================
+echo   PREMIERE UTILISATION - configure ta cle et ton mot de passe
+echo ------------------------------------------------------------
+echo   1. Ouvre le fichier .env avec le Bloc-notes
+echo   2. Ligne ANTHROPIC_API_KEY=  colle ta cle sk-ant-...
+echo   3. Ligne APP_PASSWORD=  choisis un mot de passe
+echo   4. Enregistre, ferme, puis relance start.bat
+echo ============================================================
+echo.
+echo Appuie sur une touche pour fermer.
+pause >nul
+goto end
+
+:end
