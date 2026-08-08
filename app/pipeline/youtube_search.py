@@ -1,17 +1,17 @@
-"""Recherche de vidéos YouTube par thème, classées par viralité (vues/jour).
-Utilise l'API officielle YouTube Data v3 (nécessite YT_API_KEY dans le .env).
+"""Recherche de vidéos YouTube par thème — SANS clé API.
+Utilise la recherche intégrée de yt-dlp (ytsearch), classée par nombre de vues.
+Aucune configuration : ça marche dès que yt-dlp fonctionne (ton PC maison).
 """
 
-import json
-import re
-import urllib.parse
-import urllib.request
+import os
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 
-from .. import config
-
-API = "https://www.googleapis.com/youtube/v3"
+DURATION_RANGES = {
+    "short": (30, 240),        # 30 s - 4 min
+    "medium": (240, 1200),     # 4 - 20 min
+    "long": (1200, 10 ** 9),   # > 20 min
+    "any": (30, 10 ** 9),
+}
 
 
 @dataclass
@@ -27,99 +27,77 @@ class VideoHit:
     views_per_day: int
 
 
-def _get(endpoint: str, params: dict) -> dict:
-    params = {**params, "key": config.YT_API_KEY}
-    url = f"{API}/{endpoint}?{urllib.parse.urlencode(params)}"
-    with urllib.request.urlopen(url, timeout=20) as r:
-        return json.loads(r.read().decode("utf-8"))
-
-
-def _parse_duration(iso: str) -> int:
-    """PT1H2M3S -> secondes."""
-    m = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso or "")
-    if not m:
-        return 0
-    h, mi, s = (int(x) if x else 0 for x in m.groups())
-    return h * 3600 + mi * 60 + s
-
-
-def _days_since(iso: str) -> float:
-    try:
-        pub = datetime.fromisoformat(iso.replace("Z", "+00:00"))
-        return max((datetime.now(timezone.utc) - pub).total_seconds() / 86400, 1.0)
-    except Exception:
-        return 1.0
-
-
 def search(query: str, duration: str = "long", recency_days: int = 180,
            max_results: int = 12, language: str = "fr") -> list[dict]:
-    """Cherche des vidéos et les classe par vues/jour (viralité récente).
+    """Cherche des vidéos via yt-dlp et les classe par nombre de vues.
 
-    duration : "any" | "medium" (4-20 min) | "long" (>20 min) — pour cibler du
-    contenu long découpable plutôt que des Shorts déjà finis.
+    duration : "any" | "short" | "medium" | "long" — pour cibler du contenu
+    long découpable plutôt que des Shorts déjà finis.
+    (recency_days est accepté pour compatibilité mais non filtré ici.)
     """
-    if not config.YT_API_KEY:
-        raise RuntimeError(
-            "Recherche indisponible : ajoute YT_API_KEY dans ton fichier .env. "
-            "Obtiens une clé gratuite sur https://console.cloud.google.com/ "
-            "(active « YouTube Data API v3 »)."
-        )
-    if not query.strip():
+    query = query.strip()
+    if not query:
         raise RuntimeError("Entre un thème de recherche.")
 
-    published_after = None
-    if recency_days:
-        from datetime import timedelta
+    try:
+        import yt_dlp
+    except ImportError as e:
+        raise RuntimeError("yt-dlp n'est pas installé.") from e
 
-        published_after = (
-            datetime.now(timezone.utc) - timedelta(days=recency_days)
-        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    lo, hi = DURATION_RANGES.get(duration, DURATION_RANGES["any"])
 
-    search_params = {
-        "part": "snippet",
-        "q": query,
-        "type": "video",
-        "order": "viewCount",
-        "maxResults": 40,
-        "relevanceLanguage": language or "fr",
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "extract_flat": "in_playlist",  # rapide : pas de téléchargement, juste les métadonnées
+        "default_search": "ytsearch",
+        "noplaylist": True,
     }
-    if duration in ("medium", "long", "short"):
-        search_params["videoDuration"] = duration
-    if published_after:
-        search_params["publishedAfter"] = published_after
+    cookies = os.getenv("YTDLP_COOKIES")
+    if cookies and cookies.strip():
+        # réutilise le même mécanisme de cookies que le téléchargeur
+        from . import downloader
+        from .. import config
 
-    data = _get("search", search_params)
-    ids = [it["id"]["videoId"] for it in data.get("items", []) if it.get("id", {}).get("videoId")]
-    if not ids:
-        return []
+        cookie_file = config.DOWNLOADS_DIR / ".cookies.txt"
+        cookie_file.write_text(downloader._to_netscape(cookies), encoding="utf-8")
+        opts["cookiefile"] = str(cookie_file)
 
-    # récupère stats (vues) + durée réelle
-    details = _get("videos", {"part": "statistics,contentDetails,snippet", "id": ",".join(ids)})
+    # on demande large (40) puis on filtre/trie côté serveur
+    search_url = f"ytsearch40:{query}"
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            data = ydl.extract_info(search_url, download=False)
+    except Exception as e:
+        raise RuntimeError(f"Recherche échouée : {str(e)[:200]}") from e
+
     hits: list[VideoHit] = []
-    for it in details.get("items", []):
-        vid = it["id"]
-        stats = it.get("statistics", {})
-        views = int(stats.get("viewCount", 0))
-        dur = _parse_duration(it.get("contentDetails", {}).get("duration", ""))
-        if dur < 30:  # écarte les Shorts / clips déjà courts
+    for entry in (data.get("entries") or []):
+        if not entry:
             continue
-        published = it.get("snippet", {}).get("publishedAt", "")
-        vpd = int(views / _days_since(published))
-        thumbs = it.get("snippet", {}).get("thumbnails", {})
-        thumb = (thumbs.get("medium") or thumbs.get("default") or {}).get("url", "")
+        vid = entry.get("id")
+        if not vid:
+            continue
+        dur = int(entry.get("duration") or 0)
+        if dur < lo or dur > hi:
+            continue
+        views = int(entry.get("view_count") or 0)
+        # miniature fiable construite depuis l'ID
+        thumb = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
         hits.append(
             VideoHit(
                 video_id=vid,
-                title=it.get("snippet", {}).get("title", ""),
-                channel=it.get("snippet", {}).get("channelTitle", ""),
+                title=entry.get("title") or "",
+                channel=entry.get("channel") or entry.get("uploader") or "",
                 url=f"https://www.youtube.com/watch?v={vid}",
                 thumbnail=thumb,
                 views=views,
                 duration_sec=dur,
-                published=published[:10],
-                views_per_day=vpd,
+                published="",          # non fourni par la recherche rapide
+                views_per_day=0,        # idem : on classe par vues totales
             )
         )
 
-    hits.sort(key=lambda h: h.views_per_day, reverse=True)
+    # classe par nombre de vues (les plus vues = les plus virales sur le thème)
+    hits.sort(key=lambda h: h.views, reverse=True)
     return [asdict(h) for h in hits[:max_results]]

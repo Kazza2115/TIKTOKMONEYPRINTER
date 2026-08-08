@@ -21,7 +21,6 @@ if (searchBtn) {
         body: JSON.stringify({
           query,
           duration: document.getElementById("search-duration").value,
-          recency_days: document.getElementById("search-recency").value,
         }),
       });
       const data = await res.json();
@@ -65,9 +64,9 @@ function renderSearchResults(results, box) {
     card.innerHTML = `
       <img src="${v.thumbnail}" alt="" loading="lazy">
       <div class="search-body">
-        <div class="viral-badge">🔥 ${fmtViews(v.views_per_day)}/jour</div>
+        <div class="viral-badge">${v.views_per_day ? "🔥 " + fmtViews(v.views_per_day) + "/jour" : "🔥 " + fmtViews(v.views) + " vues"}</div>
         <h4>${esc(v.title)}</h4>
-        <p class="muted small">${esc(v.channel)} · ${fmtViews(v.views)} vues · ${fmtDur(v.duration_sec)} · ${v.published}</p>
+        <p class="muted small">${esc(v.channel)} · ${fmtDur(v.duration_sec)}${v.published ? " · " + v.published : ""}</p>
         <button class="use-btn" type="button">✂️ Utiliser cette vidéo</button>
       </div>`;
     card.querySelector(".use-btn").addEventListener("click", () => {
