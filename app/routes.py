@@ -67,11 +67,25 @@ def api_create_job():
         hook_position = "top"
     hook_lang = "français" if (data.get("hook_lang") == "fr") else "anglais"
 
+    def _num(key, default, lo, hi):
+        try:
+            v = float(data.get(key))
+        except (TypeError, ValueError):
+            return default
+        return max(lo, min(v, hi))
+
+    hook_pos_pct = _num("hook_pos_pct", 10.0, 0, 95)
+    sub_pos_pct = _num("sub_pos_pct", 78.0, 0, 95)
+    hook_size = int(_num("hook_size", 72, 30, 130))
+    sub_size = int(_num("sub_size", 96, 40, 160))
+
     job = jobs.create_job(
         url, mode=mode, manual_clips=manual_clips, language=language,
         max_clips=max_clips, framing=framing,
         min_duration=min_duration, max_duration=max_duration,
         font=font, hook_position=hook_position, hook_lang=hook_lang,
+        hook_pos_pct=hook_pos_pct, sub_pos_pct=sub_pos_pct,
+        hook_size=hook_size, sub_size=sub_size,
     )
     return jsonify(job.to_dict()), 201
 

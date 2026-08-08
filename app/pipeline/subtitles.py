@@ -26,9 +26,20 @@ HOOK_POSITIONS = {
 }
 
 
-def _header(font: str, hook_align: int, hook_marginv: int) -> str:
+PLAY_H = 1920
+
+
+def _pct_to_marginv_top(pct: float) -> int:
+    """Position verticale (% depuis le haut) -> MarginV pour une ancre haut (align 8)."""
+    return max(0, min(int(pct / 100 * PLAY_H), PLAY_H - 100))
+
+
+def _header(font: str, hook_marginv: int, hook_size: int,
+            sub_marginv: int, sub_size: int) -> str:
     if font not in FONTS:
         font = "Arial"
+    # ancre HAUT (alignment 8) pour hook ET sous-titres : MarginV = distance
+    # depuis le haut, ce qui correspond directement au glissement dans l'éditeur.
     return f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: 1080
@@ -38,8 +49,8 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Sub,{font},96,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,9,3,2,60,60,660,1
-Style: Hook,{font},72,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,10,0,{hook_align},70,70,{hook_marginv},1
+Style: Sub,{font},{sub_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,9,3,8,60,60,{sub_marginv},1
+Style: Hook,{font},{hook_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,10,0,8,70,70,{hook_marginv},1
 Style: Badge,Arial,52,&H0000E5FF,&H0000E5FF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,8,0,8,70,70,70,1
 
 [Events]
@@ -73,11 +84,24 @@ def build_ass(
     out_path: Path,
     font: str = "Arial",
     hook_position: str = "top",
+    hook_pos_pct: float | None = None,
+    sub_pos_pct: float = 78.0,
+    hook_size: int = 72,
+    sub_size: int = 96,
 ) -> Path:
-    """Écrit le fichier .ass du clip (timestamps relatifs au clip)."""
+    """Écrit le fichier .ass du clip (timestamps relatifs au clip).
+
+    hook_pos_pct / sub_pos_pct : position verticale en % depuis le haut (éditeur).
+    Si hook_pos_pct est None, on retombe sur hook_position (top/middle/bottom).
+    """
     clip_len = clip_end - clip_start
-    hook_align, hook_marginv = HOOK_POSITIONS.get(hook_position, HOOK_POSITIONS["top"])
-    header = _header(font, hook_align, hook_marginv)
+    if hook_pos_pct is None:
+        hook_pos_pct = {"top": 10.0, "middle": 46.0, "bottom": 82.0}.get(hook_position, 10.0)
+    hook_marginv = _pct_to_marginv_top(hook_pos_pct)
+    sub_marginv = _pct_to_marginv_top(sub_pos_pct)
+    hook_size = max(30, min(int(hook_size), 130))
+    sub_size = max(40, min(int(sub_size), 160))
+    header = _header(font, hook_marginv, hook_size, sub_marginv, sub_size)
     events: list[str] = []
 
     # --- hook en haut ---

@@ -42,8 +42,12 @@ class Job:
     min_duration: int = 0  # 0 = valeur par défaut de config
     max_duration: int = 0
     font: str = "Arial"
-    hook_position: str = "top"  # top | middle | bottom
+    hook_position: str = "top"  # top | middle | bottom (compat)
     hook_lang: str = "anglais"  # langue des hooks/légendes en mode IA
+    hook_pos_pct: float = 10.0  # position verticale du hook (% depuis le haut)
+    sub_pos_pct: float = 78.0   # position verticale des sous-titres
+    hook_size: int = 72
+    sub_size: int = 96
     status: str = "pending"  # pending | running | done | error
     step: str = "download"
     progress: float = 0.0
@@ -129,10 +133,14 @@ def create_job(url: str, mode: str = "ai", manual_clips: list[dict] | None = Non
                language: str | None = None, max_clips: int | None = None,
                framing: str = "fit", min_duration: int = 0,
                max_duration: int = 0, font: str = "Arial",
-               hook_position: str = "top", hook_lang: str = "anglais") -> Job:
+               hook_position: str = "top", hook_lang: str = "anglais",
+               hook_pos_pct: float = 10.0, sub_pos_pct: float = 78.0,
+               hook_size: int = 72, sub_size: int = 96) -> Job:
     job = Job(id=uuid.uuid4().hex[:12], url=url, mode=mode, framing=framing,
               min_duration=min_duration, max_duration=max_duration,
-              font=font, hook_position=hook_position, hook_lang=hook_lang)
+              font=font, hook_position=hook_position, hook_lang=hook_lang,
+              hook_pos_pct=hook_pos_pct, sub_pos_pct=sub_pos_pct,
+              hook_size=hook_size, sub_size=sub_size)
     with _lock:
         _jobs[job.id] = job
     _save(job)
@@ -224,6 +232,10 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
                 out_path=clip_dir / f"clip_{i + 1:02d}.ass",
                 font=job.font,
                 hook_position=job.hook_position,
+                hook_pos_pct=job.hook_pos_pct,
+                sub_pos_pct=job.sub_pos_pct,
+                hook_size=job.hook_size,
+                sub_size=job.sub_size,
             )
             filename = f"clip_{i + 1:02d}.mp4"
             cutter.cut_clip(

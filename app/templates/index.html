@@ -73,13 +73,6 @@
           <option value="fr">🇫🇷 Français</option>
         </select>
       </label>
-      <label>Position du hook
-        <select name="hook_position">
-          <option value="top">Haut</option>
-          <option value="middle">Milieu</option>
-          <option value="bottom">Bas</option>
-        </select>
-      </label>
       <label>Police
         <select name="font">
           <option value="Arial">Arial</option>
@@ -100,12 +93,23 @@
     </label>
 
     <div class="preview-wrap">
-      <span class="muted small">Aperçu de la mise en page (indicatif)</span>
+      <span class="muted small">✋ Éditeur : fais glisser le hook et les sous-titres pour les placer</span>
       <div class="preview-phone" id="preview">
-        <div class="pv-hook" id="pv-hook">YOUR HOOK HERE</div>
-        <div class="pv-sub"><span>THIS IS</span> <span class="pv-hl">HOW</span> <span>IT LOOKS</span></div>
+        <div class="pv-hook draggable" id="pv-hook">YOUR HOOK HERE</div>
+        <div class="pv-sub draggable" id="pv-sub"><span>THIS IS</span> <span class="pv-hl">HOW</span> <span>IT LOOKS</span></div>
+      </div>
+      <div class="row" style="width:100%;max-width:320px">
+        <label>Taille hook
+          <input type="range" name="hook_size" min="40" max="120" value="72" id="hook-size">
+        </label>
+        <label>Taille sous-titres
+          <input type="range" name="sub_size" min="60" max="150" value="96" id="sub-size">
+        </label>
       </div>
     </div>
+
+    <input type="hidden" name="hook_pos_pct" id="hook-pos-pct" value="10">
+    <input type="hidden" name="sub_pos_pct" id="sub-pos-pct" value="78">
 
     <button type="submit" id="submit-btn">🚀 Générer les clips</button>
     <p id="form-error" class="error hidden"></p>

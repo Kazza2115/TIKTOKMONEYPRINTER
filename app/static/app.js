@@ -87,23 +87,60 @@ function renderSearchResults(results, box) {
   });
 }
 
-// --- Aperçu de la mise en page (hook / sous-titres) ---
+// --- Éditeur de mise en page : glisser hook + sous-titres, régler les tailles ---
 const preview = document.getElementById("preview");
 if (preview) {
   const pvHook = document.getElementById("pv-hook");
-  function updatePreview() {
+  const pvSub = document.getElementById("pv-sub");
+  const hookPct = document.getElementById("hook-pos-pct");
+  const subPct = document.getElementById("sub-pos-pct");
+
+  function place(el, pct) {
+    el.style.top = pct + "%";
+    el.style.transform = "translateY(-50%)";
+  }
+  place(pvHook, parseFloat(hookPct.value));
+  place(pvSub, parseFloat(subPct.value));
+
+  function makeDraggable(el, store) {
+    let dragging = false;
+    const onMove = (clientY) => {
+      const r = preview.getBoundingClientRect();
+      let pct = ((clientY - r.top) / r.height) * 100;
+      pct = Math.max(3, Math.min(pct, 95));
+      place(el, pct);
+      store.value = pct.toFixed(1);
+    };
+    el.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    el.addEventListener("pointermove", (e) => {
+      if (dragging) onMove(e.clientY);
+    });
+    el.addEventListener("pointerup", () => (dragging = false));
+    el.addEventListener("pointercancel", () => (dragging = false));
+  }
+  makeDraggable(pvHook, hookPct);
+  makeDraggable(pvSub, subPct);
+
+  function updateStyle() {
     const font = document.querySelector('[name="font"]').value;
-    const pos = document.querySelector('[name="hook_position"]').value;
     const lang = document.querySelector('[name="hook_lang"]').value;
     preview.style.fontFamily = font + ", sans-serif";
     pvHook.textContent = lang === "fr" ? "TON HOOK ICI" : "YOUR HOOK HERE";
-    pvHook.className = "pv-hook pv-" + pos;
+    // aperçu des tailles (échelle réduite pour le cadre)
+    pvHook.style.fontSize = document.getElementById("hook-size").value / 90 + "rem";
+    pvSub.style.fontSize = document.getElementById("sub-size").value / 90 + "rem";
   }
-  ["font", "hook_position", "hook_lang"].forEach((n) => {
+  ["font", "hook_lang"].forEach((n) => {
     const el = document.querySelector('[name="' + n + '"]');
-    if (el) el.addEventListener("change", updatePreview);
+    if (el) el.addEventListener("change", updateStyle);
   });
-  updatePreview();
+  document.getElementById("hook-size").addEventListener("input", updateStyle);
+  document.getElementById("sub-size").addEventListener("input", updateStyle);
+  updateStyle();
 }
 
 // --- Formulaire de création de job (page d'accueil) ---
@@ -135,8 +172,11 @@ if (form) {
           min_duration: fd.get("min_duration"),
           max_duration: fd.get("max_duration"),
           hook_lang: fd.get("hook_lang"),
-          hook_position: fd.get("hook_position"),
           font: fd.get("font"),
+          hook_pos_pct: fd.get("hook_pos_pct"),
+          sub_pos_pct: fd.get("sub_pos_pct"),
+          hook_size: fd.get("hook_size"),
+          sub_size: fd.get("sub_size"),
           max_clips: fd.get("max_clips"),
           language: fd.get("language"),
           manual_clips: fd.get("manual_clips"),
