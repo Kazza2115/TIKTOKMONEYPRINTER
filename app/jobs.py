@@ -211,8 +211,14 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
             suggestions = plan.clips
             summary = plan.video_summary
             if not suggestions:
+                if job.mode == "auto_free":
+                    raise RuntimeError(
+                        "Aucun clip généré (transcription vide ou vidéo trop courte). "
+                        "Vérifie que la vidéo contient de la parole."
+                    )
                 raise RuntimeError(
-                    "L'IA n'a trouvé aucun moment à fort potentiel dans cette vidéo."
+                    "L'IA n'a trouvé aucun moment à fort potentiel. Essaie le mode "
+                    "gratuit ou le mode manuel."
                 )
         _set(job, video_summary=summary, step="cut", progress=0.0)
 

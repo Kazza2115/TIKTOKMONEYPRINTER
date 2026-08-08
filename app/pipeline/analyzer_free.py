@@ -15,8 +15,9 @@ from . import analyzer
 from .. import config
 from .transcriber import Segment, Transcript
 
-# mots/expressions qui signalent un moment fort (fr + quelques génériques)
+# mots/expressions qui signalent un moment fort (français + anglais)
 HOOK_WORDS = [
+    # français
     "jamais", "personne", "secret", "vérité", "verite", "fou", "dingue",
     "incroyable", "choqué", "choque", "grave", "abusé", "abuse", "attends",
     "écoute", "ecoute", "regarde", "problème", "probleme", "argent", "euros",
@@ -24,7 +25,14 @@ HOOK_WORDS = [
     "truc de ouf", "je te jure", "tu sais pas", "révèle", "revele", "cash",
     "million", "interdit", "caché", "cache", "peur", "pire", "meilleur",
     "première fois", "premiere fois", "dernière fois", "derniere fois",
-    "never", "secret", "crazy", "insane", "money", "story", "truth",
+    # anglais
+    "never", "nobody", "everybody", "secret", "truth", "crazy", "insane",
+    "money", "dollars", "story", "listen", "wait", "look", "problem",
+    "believe", "shocked", "worst", "best", "first time", "last time",
+    "biggest", "reveal", "honestly", "literally", "actually", "the thing is",
+    "you won't", "you wont", "i swear", "guess what", "here's why", "heres why",
+    "million", "billion", "changed my life", "nobody tells you", "mistake",
+    "afraid", "scared", "danger", "illegal", "banned", "hidden", "warning",
 ]
 
 STOPWORDS = set(
@@ -147,8 +155,16 @@ def analyze_free(transcript: Transcript, video_title: str, duration: float,
     if not candidates:  # vidéo très courte : prend tout
         candidates = [(1.0, 0, len(segs))]
 
-    candidates.sort(reverse=True, key=lambda c: c[0])
-    best_score = candidates[0][0] or 1.0
+    # tri par score décroissant ; s'il n'y a aucun signal fort (vidéo calme,
+    # langue non couverte...), on ordonne par position pour couvrir la vidéo
+    best_score = candidates[0][0]
+    has_signal = best_score > 0
+    denom = best_score or 1.0
+    if not has_signal:
+        candidates.sort(key=lambda c: c[1])  # par ordre chronologique
+    else:
+        candidates.sort(reverse=True, key=lambda c: c[0])
+
     used: set[int] = set()
     clips: list[analyzer.ClipSuggestion] = []
 
@@ -160,20 +176,21 @@ def analyze_free(transcript: Transcript, video_title: str, duration: float,
     if series:
         clips.extend(series[:max_clips])
 
-    # --- 2. sélection gloutonne des autres fenêtres, non chevauchantes,
-    #        en écartant les passages sans réel intérêt (< 35 % du meilleur score)
+    # --- 2. sélection gloutonne des autres fenêtres, non chevauchantes.
+    #        Avec signal : on écarte les passages faibles (< 35 % du meilleur).
+    #        Sans signal : on prend des fenêtres réparties sur toute la vidéo.
     for score, i, j in candidates:
         if len(clips) >= max_clips:
             break
-        if score < 0.35 * best_score:
+        if has_signal and score < 0.35 * denom:
             break
         if any(k in used for k in range(i, j)):
             continue
-        # retire le vide en bordure, recule au début du sujet (pause),
-        # puis garantit la durée minimale
         i, j = _trim_dead_edges(segs, i, j)
         i = _snap_to_topic_start(segs, i, segs[j - 1].end, used, max_dur)
         i, j = _ensure_min_length(segs, i, j, min_dur, used)
+        if any(k in used for k in range(i, j)):
+            continue
         used.update(range(i, j))
         window = segs[i:j]
         clips.append(
@@ -183,15 +200,30 @@ def analyze_free(transcript: Transcript, video_title: str, duration: float,
                 title=_make_hook(window).capitalize()[:60],
                 hook_text=_make_hook(window),
                 caption=_make_caption(window),
-                viral_score=int(35 + 40 * score / best_score),
-                reasoning="Sélection gratuite : pic d'accroche/énergie détecté dans ce passage.",
+                viral_score=int(35 + 40 * score / denom) if has_signal else 45,
+                reasoning=("Sélection gratuite : pic d'accroche/énergie détecté."
+                           if has_signal else
+                           "Sélection gratuite : passage réparti (aucun signal fort détecté)."),
             )
         )
 
+    # --- filet de sécurité : toujours produire au moins un clip ---
     if not clips:
-        raise RuntimeError(
-            "Aucun passage assez fort détecté par l'analyse gratuite. "
-            "Essaie le mode IA ou le mode manuel."
+        a, b = _trim_dead_edges(segs, 0, len(segs))
+        e = a + 1
+        while e < b and segs[e - 1].end - segs[a].start < max_dur:
+            e += 1
+        window = segs[a:e]
+        clips.append(
+            analyzer.ClipSuggestion(
+                start=window[0].start,
+                end=window[-1].end,
+                title=_make_hook(window).capitalize()[:60] or "Clip",
+                hook_text=_make_hook(window),
+                caption=_make_caption(window),
+                viral_score=40,
+                reasoning="Sélection gratuite : clip par défaut sur la vidéo.",
+            )
         )
 
     clips.sort(key=lambda c: c.start)

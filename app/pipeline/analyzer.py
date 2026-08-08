@@ -167,10 +167,17 @@ def _sanitize(plan: ClipPlan, duration: float, min_dur: int = 0) -> ClipPlan:
     for c in plan.clips:
         c.start = max(0.0, min(c.start, duration))
         c.end = max(0.0, min(c.end, duration))
+        c.viral_score = max(0, min(100, c.viral_score))
         if c.end - c.start < effective_min - 3.0:
             continue
-        c.viral_score = max(0, min(100, c.viral_score))
         valid.append(c)
+
+    # filet de sécurité : ne jamais tout vider par le filtre de durée —
+    # garder le clip le plus long si le filtrage a tout retiré
+    if not valid and plan.clips:
+        longest = max(plan.clips, key=lambda c: c.end - c.start)
+        if longest.end - longest.start >= 3:
+            valid = [longest]
 
     # cohérence des séries : recompte series_total à partir des parties réellement présentes
     by_series: dict[str, list[ClipSuggestion]] = {}
