@@ -12,7 +12,24 @@ from .transcriber import Word
 HOOK_DURATION = 3.5  # secondes d'affichage du hook
 WORDS_PER_GROUP = 3
 
-ASS_HEADER = """[Script Info]
+# polices proposées (doivent être installées sur le PC ; ce sont des polices
+# Windows standard, donc disponibles partout)
+FONTS = ["Arial", "Impact", "Verdana", "Tahoma", "Georgia", "Trebuchet MS",
+         "Comic Sans MS", "Franklin Gothic Medium"]
+
+# position du hook -> (Alignment .ass, MarginV)
+#   haut = 8 (haut-centre), milieu = 5 (centre), bas = 2 (bas-centre, au-dessus des sous-titres)
+HOOK_POSITIONS = {
+    "top": (8, 180),
+    "middle": (5, 0),
+    "bottom": (2, 300),
+}
+
+
+def _header(font: str, hook_align: int, hook_marginv: int) -> str:
+    if font not in FONTS:
+        font = "Arial"
+    return f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: 1080
 PlayResY: 1920
@@ -21,13 +38,14 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Sub,Arial,96,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,9,3,2,60,60,660,1
-Style: Hook,Arial,72,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,10,0,8,70,70,180,1
+Style: Sub,{font},96,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,9,3,2,60,60,660,1
+Style: Hook,{font},72,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,10,0,{hook_align},70,70,{hook_marginv},1
 Style: Badge,Arial,52,&H0000E5FF,&H0000E5FF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,8,0,8,70,70,70,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
+
 
 HIGHLIGHT = r"{\c&H00E5FF&}"  # jaune-or (BGR)
 RESET = r"{\c&HFFFFFF&}"
@@ -53,9 +71,13 @@ def build_ass(
     part: int | None,
     series_total: int | None,
     out_path: Path,
+    font: str = "Arial",
+    hook_position: str = "top",
 ) -> Path:
     """Écrit le fichier .ass du clip (timestamps relatifs au clip)."""
     clip_len = clip_end - clip_start
+    hook_align, hook_marginv = HOOK_POSITIONS.get(hook_position, HOOK_POSITIONS["top"])
+    header = _header(font, hook_align, hook_marginv)
     events: list[str] = []
 
     # --- hook en haut ---
@@ -99,5 +121,5 @@ def build_ass(
                 f"Dialogue: 0,{_ts(start)},{_ts(end)},Sub,,0,0,0,,{' '.join(parts)}"
             )
 
-    out_path.write_text(ASS_HEADER + "\n".join(events) + "\n", encoding="utf-8")
+    out_path.write_text(header + "\n".join(events) + "\n", encoding="utf-8")
     return out_path

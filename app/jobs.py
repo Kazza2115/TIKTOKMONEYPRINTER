@@ -41,6 +41,9 @@ class Job:
     framing: str = "fit"  # "fit" (vidéo entière + fond flouté) | "crop" (zoom)
     min_duration: int = 0  # 0 = valeur par défaut de config
     max_duration: int = 0
+    font: str = "Arial"
+    hook_position: str = "top"  # top | middle | bottom
+    hook_lang: str = "anglais"  # langue des hooks/légendes en mode IA
     status: str = "pending"  # pending | running | done | error
     step: str = "download"
     progress: float = 0.0
@@ -125,9 +128,11 @@ def parse_manual_clips(text: str) -> list[dict]:
 def create_job(url: str, mode: str = "ai", manual_clips: list[dict] | None = None,
                language: str | None = None, max_clips: int | None = None,
                framing: str = "fit", min_duration: int = 0,
-               max_duration: int = 0) -> Job:
+               max_duration: int = 0, font: str = "Arial",
+               hook_position: str = "top", hook_lang: str = "anglais") -> Job:
     job = Job(id=uuid.uuid4().hex[:12], url=url, mode=mode, framing=framing,
-              min_duration=min_duration, max_duration=max_duration)
+              min_duration=min_duration, max_duration=max_duration,
+              font=font, hook_position=hook_position, hook_lang=hook_lang)
     with _lock:
         _jobs[job.id] = job
     _save(job)
@@ -192,7 +197,8 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
                 )
             else:
                 plan = analyzer.analyze(
-                    transcript, src.title, src.duration, max_clips=max_clips, **dur_kw
+                    transcript, src.title, src.duration, max_clips=max_clips,
+                    hook_lang=job.hook_lang, **dur_kw
                 )
             suggestions = plan.clips
             summary = plan.video_summary
@@ -216,6 +222,8 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
                 part=c.part,
                 series_total=c.series_total,
                 out_path=clip_dir / f"clip_{i + 1:02d}.ass",
+                font=job.font,
+                hook_position=job.hook_position,
             )
             filename = f"clip_{i + 1:02d}.mp4"
             cutter.cut_clip(

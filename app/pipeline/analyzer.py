@@ -52,10 +52,10 @@ CONTRAINTES TECHNIQUES :
   toute la vidéo est parfaitement valide.
 - Les timestamps start/end doivent correspondre à des débuts/fins de phrases du transcript
   (utilise les bornes [start-end] fournies). Ne coupe jamais un mot en deux.
-- hook_text : le texte incrusté en haut du clip pendant les premières secondes. Court (max 8 mots),
-  percutant, en MAJUSCULES ou style choc. En français sauf si la vidéo est dans une autre langue.
+- hook_text : le texte incrusté sur le clip pendant les premières secondes. Court (max 8 mots),
+  percutant, en MAJUSCULES ou style choc. RÉDIGE-LE EN {hook_lang}.
 - caption : la description TikTok — 1 phrase qui pousse au commentaire + 3 à 5 hashtags pertinents
-  (mélange gros hashtags et hashtags de niche).
+  (mélange gros hashtags et hashtags de niche). RÉDIGE-LA EN {hook_lang}.
 - viral_score : ton estimation 0-100 du potentiel du clip. Sois exigeant : un 80+ doit être rare.
 - Classe les clips du plus fort au plus faible potentiel, mais garde les parties d'une même série
   consécutives et dans l'ordre.
@@ -85,7 +85,7 @@ class ClipPlan(BaseModel):
 
 def analyze(transcript: Transcript, video_title: str, duration: float,
             max_clips: int | None = None, min_dur: int | None = None,
-            max_dur: int | None = None) -> ClipPlan:
+            max_dur: int | None = None, hook_lang: str = "anglais") -> ClipPlan:
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         raise RuntimeError(
@@ -108,6 +108,7 @@ def analyze(transcript: Transcript, video_title: str, duration: float,
         min_dur=min_dur,
         max_dur=max_dur,
         max_clips=max_clips,
+        hook_lang=hook_lang,
     )
 
     user_content = (

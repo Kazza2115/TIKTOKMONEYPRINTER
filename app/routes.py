@@ -57,10 +57,21 @@ def api_create_job():
     if min_duration and max_duration and max_duration <= min_duration:
         return jsonify({"error": "La durée max doit être supérieure à la durée min."}), 400
 
+    from .pipeline.subtitles import FONTS, HOOK_POSITIONS
+
+    font = data.get("font") or "Arial"
+    if font not in FONTS:
+        font = "Arial"
+    hook_position = data.get("hook_position") or "top"
+    if hook_position not in HOOK_POSITIONS:
+        hook_position = "top"
+    hook_lang = "français" if (data.get("hook_lang") == "fr") else "anglais"
+
     job = jobs.create_job(
         url, mode=mode, manual_clips=manual_clips, language=language,
         max_clips=max_clips, framing=framing,
         min_duration=min_duration, max_duration=max_duration,
+        font=font, hook_position=hook_position, hook_lang=hook_lang,
     )
     return jsonify(job.to_dict()), 201
 
