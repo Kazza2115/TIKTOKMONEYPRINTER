@@ -199,7 +199,17 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
                 "min_dur": job.min_duration or None,
                 "max_dur": job.max_duration or None,
             }
-            if job.mode == "auto_free":
+            has_speech = any(s.text.strip() for s in transcript.segments)
+            if not has_speech:
+                # aucune parole détectée : clip(s) brut(s) sans sous-titres,
+                # quel que soit le mode (inutile de dépenser des crédits IA).
+                min_d = float(job.min_duration or config.CLIP_MIN_DURATION)
+                max_d = float(job.max_duration or config.CLIP_MAX_DURATION)
+                min_d = min(min_d, max(src.duration - 2.0, 3.0))
+                plan = analyzer_free._no_transcript_plan(
+                    src.title, src.duration, min_d, max_d
+                )
+            elif job.mode == "auto_free":
                 plan = analyzer_free.analyze_free(
                     transcript, src.title, src.duration, max_clips=max_clips, **dur_kw
                 )

@@ -129,6 +129,64 @@ def _snap_to_topic_start(segs: list[Segment], i: int, end_time: float,
     return j
 
 
+def _no_transcript_plan(video_title: str, duration: float,
+                        min_dur: float, max_dur: float) -> analyzer.ClipPlan:
+    """Aucun mot transcrit : construit un ou plusieurs clips « bruts » qui
+    couvrent la vidéo, sans sous-titres. Sert aux vidéos musicales/ambiance ou
+    quand Whisper ne renvoie rien."""
+    total = duration if duration and duration > 0 else max_dur
+    hook = " ".join(video_title.strip().split()[:8]).upper() if video_title else ""
+    caption = (
+        f"{video_title.strip()[:80]} 👀 ton avis ? 👇 #pourtoi #fyp"
+        if video_title else "👀 ton avis ? 👇 #pourtoi #fyp"
+    )
+
+    clips: list[analyzer.ClipSuggestion] = []
+    start = 0.0
+    n = 0
+    # découpe la vidéo en tranches de max_dur (une seule si elle est courte)
+    while start < total - 1.0 and len(clips) < 3:
+        end = min(start + max_dur, total)
+        if end - start < max(3.0, min(min_dur, total)):
+            break
+        n += 1
+        clips.append(
+            analyzer.ClipSuggestion(
+                start=start,
+                end=end,
+                title=(hook.capitalize()[:60] or f"Clip {n}"),
+                hook_text=hook,
+                caption=caption,
+                viral_score=35,
+                reasoning="Aucune parole détectée : clip brut sur la vidéo (sans sous-titres).",
+            )
+        )
+        start = end
+
+    if not clips:  # vidéo minuscule : un seul clip couvrant tout
+        clips.append(
+            analyzer.ClipSuggestion(
+                start=0.0,
+                end=total,
+                title=hook.capitalize()[:60] or "Clip",
+                hook_text=hook,
+                caption=caption,
+                viral_score=35,
+                reasoning="Aucune parole détectée : clip brut sur la vidéo (sans sous-titres).",
+            )
+        )
+
+    return analyzer._sanitize(
+        analyzer.ClipPlan(
+            video_summary=f"Aucune parole détectée dans « {video_title} » — "
+            "clip(s) généré(s) sans sous-titres.",
+            clips=clips,
+        ),
+        duration,
+        min_dur=int(min_dur),
+    )
+
+
 def analyze_free(transcript: Transcript, video_title: str, duration: float,
                  max_clips: int | None = None, min_dur: int | None = None,
                  max_dur: int | None = None) -> analyzer.ClipPlan:
@@ -140,7 +198,9 @@ def analyze_free(transcript: Transcript, video_title: str, duration: float,
 
     segs = [s for s in transcript.segments if s.text.strip()]
     if not segs:
-        raise RuntimeError("Transcript vide : impossible de sélectionner des clips.")
+        # aucune parole détectée (musique, ambiance, voix non transcrite) :
+        # on produit quand même un clip couvrant la vidéo, sans sous-titres.
+        return _no_transcript_plan(video_title, duration, min_dur, max_dur)
 
     # --- construit toutes les fenêtres candidates (min-max s, bornées aux segments)
     candidates: list[tuple[float, int, int]] = []  # (score, i_start, i_end_exclu)
