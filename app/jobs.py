@@ -221,14 +221,21 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
             suggestions = plan.clips
             summary = plan.video_summary
             if not suggestions:
-                if job.mode == "auto_free":
-                    raise RuntimeError(
-                        "Aucun clip généré (transcription vide ou vidéo trop courte). "
-                        "Vérifie que la vidéo contient de la parole."
-                    )
+                # garantie absolue : on ne renvoie JAMAIS « aucun clip ».
+                # On retombe sur un ou plusieurs clips bruts couvrant la vidéo.
+                min_d = float(job.min_duration or config.CLIP_MIN_DURATION)
+                max_d = float(job.max_duration or config.CLIP_MAX_DURATION)
+                min_d = min(min_d, max(src.duration - 2.0, 3.0))
+                fallback = analyzer_free._no_transcript_plan(
+                    src.title, src.duration, min_d, max_d
+                )
+                suggestions = fallback.clips
+                summary = summary or fallback.video_summary
+            if not suggestions:
+                # ne devrait jamais arriver (vidéo de durée nulle)
                 raise RuntimeError(
-                    "L'IA n'a trouvé aucun moment à fort potentiel. Essaie le mode "
-                    "gratuit ou le mode manuel."
+                    "Vidéo inexploitable (durée nulle ou fichier corrompu). "
+                    "Vérifie le lien et réessaie."
                 )
         _set(job, video_summary=summary, step="cut", progress=0.0)
 

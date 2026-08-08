@@ -8,7 +8,7 @@ echo   TikTok Money Printer - demarrage avec lien FIXE
 echo ============================================================
 echo.
 
-if exist ".git" call :update
+call :update
 
 where python >nul 2>nul
 if errorlevel 1 goto no_python
@@ -50,9 +50,26 @@ goto end
 
 :update
 where git >nul 2>nul
-if errorlevel 1 goto :eof
+if errorlevel 1 goto no_git_warn
+if not exist ".git" call :git_setup
 echo Mise a jour de l'application vers la derniere version...
-git pull --ff-only
+git fetch origin claude/tiktok-clip-generator-31rslv
+git reset --hard origin/claude/tiktok-clip-generator-31rslv
+echo Version installee :
+git log -1 --format="  %%h  %%s"
+echo.
+goto :eof
+
+:git_setup
+echo Premiere mise a jour : connexion au depot GitHub...
+git init -q
+git remote add origin https://github.com/Kazza2115/TIKTOKMONEYPRINTER.git
+goto :eof
+
+:no_git_warn
+echo [INFO] Git n'est pas installe : l'application ne peut pas se mettre a jour
+echo toute seule. Installe Git depuis https://git-scm.com/download/win pour
+echo recevoir les corrections automatiquement.
 echo.
 goto :eof
 
