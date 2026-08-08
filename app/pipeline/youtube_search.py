@@ -4,6 +4,7 @@ Aucune configuration : ça marche dès que yt-dlp fonctionne (ton PC maison).
 """
 
 import os
+import random
 from dataclasses import asdict, dataclass
 
 DURATION_RANGES = {
@@ -63,8 +64,8 @@ def search(query: str, duration: str = "long", recency_days: int = 180,
         cookie_file.write_text(downloader._to_netscape(cookies), encoding="utf-8")
         opts["cookiefile"] = str(cookie_file)
 
-    # on demande large (40) puis on filtre/trie côté serveur
-    search_url = f"ytsearch40:{query}"
+    # on demande large (60) puis on filtre/trie côté serveur
+    search_url = f"ytsearch60:{query}"
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             data = ydl.extract_info(search_url, download=False)
@@ -100,4 +101,15 @@ def search(query: str, duration: str = "long", recency_days: int = 180,
 
     # classe par nombre de vues (les plus vues = les plus virales sur le thème)
     hits.sort(key=lambda h: h.views, reverse=True)
-    return [asdict(h) for h in hits[:max_results]]
+
+    # recherche "vivante" : au lieu de renvoyer toujours le même top figé, on
+    # constitue un large réservoir des plus vues et on en tire un échantillon
+    # aléatoire — deux recherches du même thème donnent des vidéos différentes,
+    # mais toujours parmi les plus virales.
+    pool = hits[: max(max_results * 3, 30)]
+    if len(pool) > max_results:
+        sample = random.sample(pool, max_results)
+    else:
+        sample = pool
+    sample.sort(key=lambda h: h.views, reverse=True)
+    return [asdict(h) for h in sample]
