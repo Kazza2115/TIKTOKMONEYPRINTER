@@ -18,8 +18,8 @@ from pathlib import Path
 
 from .. import config
 
-ZOOM_MIN = 1.0
-ZOOM_MAX = 3.5
+ZOOM_MIN = 0.5
+ZOOM_MAX = 3.0
 
 
 def ensure_ffmpeg():
@@ -52,27 +52,28 @@ def _clamp_zoom(zoom: float) -> float:
 
 def build_filter_args(framing: str, ass_path: Path | None,
                       zoom: float = 1.0) -> list[str]:
+    """Compose toujours la vidéo sur un fond flouté qui remplit le cadre 9:16,
+    donc jamais de bandes noires quel que soit le zoom.
+
+    - framing "crop" (défaut) : à zoom=1 la vidéo REMPLIT l'écran (plein écran,
+      les côtés sont rognés). zoom>1 = zoom avant (plus serré). zoom<1 = zoom
+      arrière (on voit plus de la vidéo, le fond flou apparaît autour).
+    - framing "fit" : à zoom=1 la vidéo entière est visible (rien coupé) sur le
+      fond flou ; zoom règle sa taille.
+    """
     ass = f",ass='{_ass_filter_path(ass_path)}'" if ass_path else ""
     z = _clamp_zoom(zoom)
     zw, zh = f"{1080 * z:.1f}", f"{1920 * z:.1f}"
 
-    if framing == "crop":
-        # recadrage centré 9:16, puis zoom supplémentaire éventuel (z > 1)
-        vf = (
-            "crop='min(iw,ih*9/16)':'min(ih,iw*16/9)',"
-            f"scale={zw}:{zh}:force_original_aspect_ratio=increase,"
-            "crop=1080:1920"
-        )
-        return ["-vf", vf + ass]
+    # "increase" = la vidéo COUVRE le cadre (plein écran) ; "decrease" = elle
+    # tient ENTIÈREMENT dedans (rien coupé). Le zoom multiplie la cible.
+    ar = "decrease" if framing == "fit" else "increase"
 
-    # "fit" : vidéo entière (agrandie par `zoom`) + fond flouté qui remplit le
-    # cadre. À zoom=1 la vidéo tient entièrement ; en montant elle grandit et
-    # déborde du cadre (le surplus est rogné, le fond flou disparaît).
     fc = (
         "[0:v]split=2[bg][fg];"
         "[bg]scale=1080:1920:force_original_aspect_ratio=increase,"
         "crop=1080:1920,boxblur=24:4[bgb];"
-        f"[fg]scale={zw}:{zh}:force_original_aspect_ratio=decrease[fgs];"
+        f"[fg]scale={zw}:{zh}:force_original_aspect_ratio={ar}[fgs];"
         f"[bgb][fgs]overlay=(W-w)/2:(H-h)/2{ass}[v]"
     )
     return ["-filter_complex", fc, "-map", "[v]", "-map", "0:a?"]

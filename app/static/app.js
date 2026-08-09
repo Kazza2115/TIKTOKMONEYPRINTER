@@ -142,19 +142,29 @@ if (preview) {
   document.getElementById("sub-size").addEventListener("input", updateStyle);
   updateStyle();
 
-  // aperçu du zoom : la zone « VIDÉO » grandit avec le zoom (source 16:9)
+  // aperçu du zoom : la zone « VIDÉO » (source 16:9) selon le cadrage
   const zoomRange = document.getElementById("zoom-range");
   const pvVideo = document.getElementById("pv-video");
   const zoomVal = document.getElementById("zoom-val");
+  const framingSel = document.querySelector('[name="framing"]');
   function updateZoom() {
     const z = parseFloat(zoomRange.value);
     const r = preview.getBoundingClientRect();
-    pvVideo.style.width = r.width * z + "px";
-    pvVideo.style.height = (r.width * z * 9) / 16 + "px";
+    const fit = framingSel && framingSel.value === "fit";
+    if (fit) {
+      // vidéo entière visible (contain) : largeur remplie, hauteur réduite
+      pvVideo.style.width = r.width * z + "px";
+      pvVideo.style.height = (r.width * z * 9) / 16 + "px";
+    } else {
+      // plein écran (cover) : à 1× la vidéo remplit tout le cadre
+      pvVideo.style.width = r.width * z + "px";
+      pvVideo.style.height = r.height * z + "px";
+    }
     zoomVal.textContent = z.toFixed(2) + "×";
   }
   if (zoomRange && pvVideo) {
     zoomRange.addEventListener("input", updateZoom);
+    if (framingSel) framingSel.addEventListener("change", updateZoom);
     updateZoom();
   }
 }
@@ -286,9 +296,9 @@ if (jobView) {
           ${score}
           ${c.reasoning ? `<p class="small muted">${escapeHtml(c.reasoning)}</p>` : ""}
           <div class="clip-zoom">
-            <span class="small muted">🔍 Regarde le clip, ajuste le zoom puis applique :</span>
+            <span class="small muted">🔍 Regarde le clip, ajuste le zoom (1× = plein écran) puis applique :</span>
             <div class="zrow">
-              <input type="range" class="zoom-slider" min="1" max="3" step="0.05" value="${z}">
+              <input type="range" class="zoom-slider" min="0.5" max="3" step="0.05" value="${z}">
               <span class="zlabel">${Number(z).toFixed(2)}×</span>
               <button type="button" class="rerender-btn">Appliquer</button>
             </div>
