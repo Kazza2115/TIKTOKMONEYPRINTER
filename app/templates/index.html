@@ -43,9 +43,10 @@
       </label>
       <label>Cadrage
         <select name="framing">
-          <option value="fit">🌫️ Vidéo entière + fond flou</option>
-          <option value="crop">🔍 Plein écran (zoom)</option>
+          <option value="fit">🌫️ Fond flou (rien coupé)</option>
+          <option value="crop">🔲 Plein écran (rogné)</option>
         </select>
+        <span class="muted small">règle l'intensité avec le zoom ci-dessous</span>
       </label>
       <label>Nb max de clips
         <input type="number" name="max_clips" value="5" min="1" max="10">
@@ -95,16 +96,23 @@
     <div class="preview-wrap">
       <span class="muted small">✋ Éditeur : fais glisser le hook et les sous-titres pour les placer</span>
       <div class="preview-phone" id="preview">
+        <div class="pv-video" id="pv-video"></div>
         <div class="pv-hook draggable" id="pv-hook">YOUR HOOK HERE</div>
         <div class="pv-sub draggable" id="pv-sub"><span>THIS IS</span> <span class="pv-hl">HOW</span> <span>IT LOOKS</span></div>
       </div>
-      <div class="row" style="width:100%;max-width:320px">
-        <label>Taille hook
-          <input type="range" name="hook_size" min="40" max="120" value="72" id="hook-size">
+      <div class="stack" style="width:100%;max-width:320px">
+        <label>🔍 Zoom : <span id="zoom-val">1.00×</span>
+          <input type="range" name="zoom" min="1" max="3" step="0.05" value="1" id="zoom-range">
+          <span class="muted small">1× = vidéo entière (fond flou) · plus haut = zoom progressif. Tu pourras réajuster clip par clip après.</span>
         </label>
-        <label>Taille sous-titres
-          <input type="range" name="sub_size" min="60" max="150" value="96" id="sub-size">
-        </label>
+        <div class="row">
+          <label>Taille hook
+            <input type="range" name="hook_size" min="40" max="120" value="72" id="hook-size">
+          </label>
+          <label>Taille sous-titres
+            <input type="range" name="sub_size" min="60" max="150" value="96" id="sub-size">
+          </label>
+        </div>
       </div>
     </div>
 

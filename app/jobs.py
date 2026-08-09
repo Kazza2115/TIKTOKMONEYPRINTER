@@ -4,12 +4,14 @@ L'état est gardé en mémoire et persisté en JSON pour survivre à un redémar
 """
 
 import json
+import os
 import re
 import threading
 import traceback
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 
 from . import config
 from .pipeline import analyzer, analyzer_free, cutter, downloader, subtitles, transcriber
@@ -39,6 +41,7 @@ class Job:
     url: str
     mode: str  # "ai" | "auto_free" | "manual"
     framing: str = "fit"  # "fit" (vidéo entière + fond flouté) | "crop" (zoom)
+    zoom: float = 1.0  # facteur de zoom (>=1.0), réglable
     min_duration: int = 0  # 0 = valeur par défaut de config
     max_duration: int = 0
     font: str = "Arial"
@@ -54,6 +57,7 @@ class Job:
     error: str | None = None
     video_title: str = ""
     video_summary: str = ""
+    source_path: str = ""  # chemin de la vidéo téléchargée (pour re-render)
     clips: list = field(default_factory=list)
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -135,9 +139,10 @@ def create_job(url: str, mode: str = "ai", manual_clips: list[dict] | None = Non
                max_duration: int = 0, font: str = "Arial",
                hook_position: str = "top", hook_lang: str = "anglais",
                hook_pos_pct: float = 10.0, sub_pos_pct: float = 78.0,
-               hook_size: int = 72, sub_size: int = 96) -> Job:
+               hook_size: int = 72, sub_size: int = 96,
+               zoom: float = 1.0) -> Job:
     job = Job(id=uuid.uuid4().hex[:12], url=url, mode=mode, framing=framing,
-              min_duration=min_duration, max_duration=max_duration,
+              zoom=zoom, min_duration=min_duration, max_duration=max_duration,
               font=font, hook_position=hook_position, hook_lang=hook_lang,
               hook_pos_pct=hook_pos_pct, sub_pos_pct=sub_pos_pct,
               hook_size=hook_size, sub_size=sub_size)
@@ -170,7 +175,8 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
             config.DOWNLOADS_DIR,
             progress_cb=lambda p: _set(job, progress=p),
         )
-        _set(job, video_title=src.title, step="transcribe", progress=0.0)
+        _set(job, video_title=src.title, source_path=str(src.path),
+             step="transcribe", progress=0.0)
 
         # 2. transcription (mots horodatés — nécessaire pour les sous-titres,
         #    même en mode manuel)
@@ -263,7 +269,7 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
             filename = f"clip_{i + 1:02d}.mp4"
             cutter.cut_clip(
                 src.path, c.start, c.end, ass_path, clip_dir / filename,
-                framing=job.framing,
+                framing=job.framing, zoom=job.zoom,
             )
             results.append(
                 asdict(
@@ -289,3 +295,43 @@ def _run(job: Job, manual_clips: list[dict] | None, language: str | None,
     except Exception as e:
         traceback.print_exc()
         _set(job, status="error", error=str(e))
+
+
+def rerender_clip(job_id: str, index: int, zoom: float,
+                  framing: str | None = None) -> dict:
+    """Réencode UN seul clip avec un nouveau zoom/cadrage, sans re-télécharger
+    ni ré-analyser (réutilise le fichier .ass déjà généré). Rapide et gratuit.
+    Retourne le clip mis à jour (dict) avec un champ `version` pour forcer le
+    rafraîchissement du cache navigateur.
+    """
+    job = _jobs.get(job_id)
+    if not job:
+        raise ValueError("Job introuvable.")
+    if index < 0 or index >= len(job.clips):
+        raise ValueError("Clip introuvable.")
+    if not job.source_path or not os.path.isfile(job.source_path):
+        raise RuntimeError(
+            "Vidéo source introuvable (supprimée ou serveur redémarré). "
+            "Relance la génération pour ce clip."
+        )
+
+    clip = job.clips[index]
+    clip_dir = config.CLIPS_DIR / job.id
+    ass_path = clip_dir / f"clip_{index + 1:02d}.ass"
+    out_path = clip_dir / clip["filename"]
+
+    fr = framing if framing in ("fit", "crop") else job.framing
+    z = cutter._clamp_zoom(zoom)
+
+    cutter.cut_clip(
+        Path(job.source_path), clip["start"], clip["end"],
+        ass_path if ass_path.exists() else None, out_path,
+        framing=fr, zoom=z,
+    )
+
+    # mémorise le dernier réglage sur le job (pratique pour les prochains)
+    clip["zoom"] = z
+    clip["framing"] = fr
+    clip["version"] = clip.get("version", 0) + 1
+    _set(job, clips=job.clips, zoom=z, framing=fr)
+    return clip

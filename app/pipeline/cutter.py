@@ -5,6 +5,11 @@ Deux cadrages :
 - "fit"  (défaut) : la vidéo entière est visible, centrée, sur un fond flouté
   (style TikTok classique — rien n'est coupé)
 - "crop" : plein écran zoomé, recadrage centré (coupe les côtés)
+
+Un facteur `zoom` (>= 1.0) agrandit progressivement l'image dans les deux
+modes : à 1.0 on garde le cadrage de base, plus on monte plus l'image remplit
+le cadre (en mode "fit" le fond flou disparaît peu à peu). Ça permet de régler
+finement le zoom au lieu du recadrage brutal tout ou rien.
 """
 
 import os
@@ -13,12 +18,8 @@ from pathlib import Path
 
 from .. import config
 
-# recadrage centré vers 9:16 (mode "crop")
-CROP_916 = (
-    "crop='min(iw,ih*9/16)':'min(ih,iw*16/9)',"
-    "scale=1080:1920:force_original_aspect_ratio=increase,"
-    "crop=1080:1920"
-)
+ZOOM_MIN = 1.0
+ZOOM_MAX = 3.5
 
 
 def ensure_ffmpeg():
@@ -41,18 +42,37 @@ def _ass_filter_path(ass_path: Path) -> str:
     return p
 
 
-def build_filter_args(framing: str, ass_path: Path | None) -> list[str]:
+def _clamp_zoom(zoom: float) -> float:
+    try:
+        z = float(zoom)
+    except (TypeError, ValueError):
+        return 1.0
+    return max(ZOOM_MIN, min(z, ZOOM_MAX))
+
+
+def build_filter_args(framing: str, ass_path: Path | None,
+                      zoom: float = 1.0) -> list[str]:
     ass = f",ass='{_ass_filter_path(ass_path)}'" if ass_path else ""
+    z = _clamp_zoom(zoom)
+    zw, zh = f"{1080 * z:.1f}", f"{1920 * z:.1f}"
 
     if framing == "crop":
-        return ["-vf", CROP_916 + ass]
+        # recadrage centré 9:16, puis zoom supplémentaire éventuel (z > 1)
+        vf = (
+            "crop='min(iw,ih*9/16)':'min(ih,iw*16/9)',"
+            f"scale={zw}:{zh}:force_original_aspect_ratio=increase,"
+            "crop=1080:1920"
+        )
+        return ["-vf", vf + ass]
 
-    # "fit" : vidéo entière + fond flouté qui remplit le cadre
+    # "fit" : vidéo entière (agrandie par `zoom`) + fond flouté qui remplit le
+    # cadre. À zoom=1 la vidéo tient entièrement ; en montant elle grandit et
+    # déborde du cadre (le surplus est rogné, le fond flou disparaît).
     fc = (
         "[0:v]split=2[bg][fg];"
         "[bg]scale=1080:1920:force_original_aspect_ratio=increase,"
         "crop=1080:1920,boxblur=24:4[bgb];"
-        "[fg]scale=1080:1920:force_original_aspect_ratio=decrease[fgs];"
+        f"[fg]scale={zw}:{zh}:force_original_aspect_ratio=decrease[fgs];"
         f"[bgb][fgs]overlay=(W-w)/2:(H-h)/2{ass}[v]"
     )
     return ["-filter_complex", fc, "-map", "[v]", "-map", "0:a?"]
@@ -65,6 +85,7 @@ def cut_clip(
     ass_path: Path | None,
     out_path: Path,
     framing: str = "fit",
+    zoom: float = 1.0,
 ) -> Path:
     ensure_ffmpeg()
 
@@ -74,7 +95,7 @@ def cut_clip(
         "-ss", f"{start:.3f}",
         "-to", f"{end:.3f}",
         "-i", str(source),
-        *build_filter_args(framing, ass_path),
+        *build_filter_args(framing, ass_path, zoom),
         "-c:v", "libx264",
         "-preset", "veryfast",
         "-crf", "20",

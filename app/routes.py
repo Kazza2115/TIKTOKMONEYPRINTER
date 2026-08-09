@@ -79,15 +79,44 @@ def api_create_job():
     hook_size = int(_num("hook_size", 72, 30, 130))
     sub_size = int(_num("sub_size", 96, 40, 160))
 
+    from .pipeline.cutter import ZOOM_MAX, ZOOM_MIN
+
+    zoom = _num("zoom", 1.0, ZOOM_MIN, ZOOM_MAX)
+
     job = jobs.create_job(
         url, mode=mode, manual_clips=manual_clips, language=language,
-        max_clips=max_clips, framing=framing,
+        max_clips=max_clips, framing=framing, zoom=zoom,
         min_duration=min_duration, max_duration=max_duration,
         font=font, hook_position=hook_position, hook_lang=hook_lang,
         hook_pos_pct=hook_pos_pct, sub_pos_pct=sub_pos_pct,
         hook_size=hook_size, sub_size=sub_size,
     )
     return jsonify(job.to_dict()), 201
+
+
+@bp.post("/api/jobs/<job_id>/clips/<int:index>/rerender")
+def api_rerender_clip(job_id, index):
+    data = request.get_json(force=True)
+    from .pipeline.cutter import ZOOM_MAX, ZOOM_MIN
+
+    try:
+        zoom = float(data.get("zoom"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Zoom invalide."}), 400
+    zoom = max(ZOOM_MIN, min(zoom, ZOOM_MAX))
+    framing = data.get("framing")
+    if framing not in ("fit", "crop", None):
+        framing = None
+
+    try:
+        clip = jobs.rerender_clip(job_id, index, zoom, framing=framing)
+    except (ValueError,) as e:
+        return jsonify({"error": str(e)}), 404
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Réencodage échoué : {e}"}), 500
+    return jsonify({"clip": clip})
 
 
 @bp.get("/api/jobs")

@@ -215,3 +215,24 @@ code { background: #0f0f16; padding: 2px 5px; border-radius: 4px; }
 .draggable { cursor: grab; touch-action: none; user-select: none; }
 .draggable:active { cursor: grabbing; outline: 2px dashed var(--accent2); }
 .preview-phone input[type="range"] { width: 100%; }
+
+/* zone vidéo schématique dans l'aperçu (montre l'effet du zoom) */
+.pv-video {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  background: repeating-linear-gradient(45deg, #3a3a4d, #3a3a4d 10px, #33333f 10px, #33333f 20px);
+  border: 1px solid rgba(255, 214, 10, 0.7);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.55);
+  font-size: 0.7rem; font-weight: 700;
+  pointer-events: none;
+}
+.pv-video::after { content: "VIDÉO"; }
+
+/* réglage zoom sur une carte de clip généré */
+.clip-zoom { display: flex; flex-direction: column; gap: 6px; }
+.clip-zoom .zrow { display: flex; align-items: center; gap: 8px; }
+.clip-zoom input[type="range"] { flex: 1; }
+.clip-zoom .rerender-btn { flex: none; width: auto; padding: 7px 12px; font-size: 0.8rem; background: var(--accent); }
+.clip-zoom .zlabel { font-size: 0.78rem; color: var(--muted); min-width: 42px; text-align: right; }

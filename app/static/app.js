@@ -141,6 +141,22 @@ if (preview) {
   document.getElementById("hook-size").addEventListener("input", updateStyle);
   document.getElementById("sub-size").addEventListener("input", updateStyle);
   updateStyle();
+
+  // aperçu du zoom : la zone « VIDÉO » grandit avec le zoom (source 16:9)
+  const zoomRange = document.getElementById("zoom-range");
+  const pvVideo = document.getElementById("pv-video");
+  const zoomVal = document.getElementById("zoom-val");
+  function updateZoom() {
+    const z = parseFloat(zoomRange.value);
+    const r = preview.getBoundingClientRect();
+    pvVideo.style.width = r.width * z + "px";
+    pvVideo.style.height = (r.width * z * 9) / 16 + "px";
+    zoomVal.textContent = z.toFixed(2) + "×";
+  }
+  if (zoomRange && pvVideo) {
+    zoomRange.addEventListener("input", updateZoom);
+    updateZoom();
+  }
 }
 
 // --- Formulaire de création de job (page d'accueil) ---
@@ -169,6 +185,7 @@ if (form) {
           url: fd.get("url"),
           mode: fd.get("mode"),
           framing: fd.get("framing"),
+          zoom: fd.get("zoom"),
           min_duration: fd.get("min_duration"),
           max_duration: fd.get("max_duration"),
           hook_lang: fd.get("hook_lang"),
@@ -259,12 +276,23 @@ if (jobView) {
       const score = c.viral_score
         ? `<span class="score">🔥 ${c.viral_score}/100</span>`
         : "";
+      const idx = job.clips.indexOf(c);
+      const z = c.zoom || job.zoom || 1;
+      const ver = c.version || 0;
       card.innerHTML = `
-        <video controls preload="metadata" src="/clips/${job.id}/${c.filename}"></video>
+        <video controls preload="metadata" src="/clips/${job.id}/${c.filename}?v=${ver}"></video>
         <div class="clip-body">
           <h3>${partBadge}${escapeHtml(c.title)}</h3>
           ${score}
           ${c.reasoning ? `<p class="small muted">${escapeHtml(c.reasoning)}</p>` : ""}
+          <div class="clip-zoom">
+            <span class="small muted">🔍 Regarde le clip, ajuste le zoom puis applique :</span>
+            <div class="zrow">
+              <input type="range" class="zoom-slider" min="1" max="3" step="0.05" value="${z}">
+              <span class="zlabel">${Number(z).toFixed(2)}×</span>
+              <button type="button" class="rerender-btn">Appliquer</button>
+            </div>
+          </div>
           ${c.caption ? `<div class="caption">${escapeHtml(c.caption)}</div>` : ""}
           <div class="clip-actions">
             <a href="/clips/${job.id}/${c.filename}" download>⬇️ Télécharger</a>
@@ -279,8 +307,47 @@ if (jobView) {
           setTimeout(() => (copyBtn.textContent = "📋 Légende"), 1500);
         });
       }
+      wireRerender(card, job.id, idx);
       container.appendChild(card);
     }
+  }
+
+  function wireRerender(card, jobId, index) {
+    const slider = card.querySelector(".zoom-slider");
+    const label = card.querySelector(".zlabel");
+    const btn = card.querySelector(".rerender-btn");
+    const video = card.querySelector("video");
+    if (!slider || !btn) return;
+    slider.addEventListener("input", () => {
+      label.textContent = parseFloat(slider.value).toFixed(2) + "×";
+    });
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      const old = btn.textContent;
+      btn.textContent = "⏳ Réencodage...";
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/clips/${index}/rerender`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ zoom: slider.value }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Erreur");
+        const c = data.clip;
+        // recharge la vidéo en cassant le cache (nouveau numéro de version)
+        const t = video.currentTime;
+        video.src = `/clips/${jobId}/${c.filename}?v=${c.version || Date.now()}`;
+        video.load();
+        video.addEventListener("loadeddata", () => { try { video.currentTime = t; } catch (e) {} }, { once: true });
+        btn.textContent = "✅ Fait";
+        setTimeout(() => (btn.textContent = old), 1500);
+      } catch (err) {
+        btn.textContent = "❌ " + err.message;
+        setTimeout(() => (btn.textContent = old), 2500);
+      } finally {
+        btn.disabled = false;
+      }
+    });
   }
 
   function escapeHtml(s) {
