@@ -41,9 +41,9 @@ def api_create_job():
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
 
-    framing = data.get("framing") or "crop"
+    framing = data.get("framing") or "fit"
     if framing not in ("fit", "crop"):
-        framing = "crop"
+        framing = "fit"
 
     def _dur(key, default):
         try:

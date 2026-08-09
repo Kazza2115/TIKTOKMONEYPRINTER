@@ -296,9 +296,9 @@ if (jobView) {
           ${score}
           ${c.reasoning ? `<p class="small muted">${escapeHtml(c.reasoning)}</p>` : ""}
           <div class="clip-zoom">
-            <span class="small muted">🔍 Regarde le clip, ajuste le zoom (1× = plein écran) puis applique :</span>
+            <span class="small muted">🔍 Regarde le clip, ajuste le zoom (1× = vidéo entière) puis applique :</span>
             <div class="zrow">
-              <input type="range" class="zoom-slider" min="0.5" max="3" step="0.05" value="${z}">
+              <input type="range" class="zoom-slider" min="1" max="4" step="0.05" value="${z}">
               <span class="zlabel">${Number(z).toFixed(2)}×</span>
               <button type="button" class="rerender-btn">Appliquer</button>
             </div>

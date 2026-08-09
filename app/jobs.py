@@ -40,8 +40,8 @@ class Job:
     id: str
     url: str
     mode: str  # "ai" | "auto_free" | "manual"
-    framing: str = "crop"  # "crop" (plein écran zoomable) | "fit" (fond flouté)
-    zoom: float = 1.0  # facteur de zoom (0.5–3.0), réglable
+    framing: str = "fit"  # "fit" (vidéo entière visible) | "crop" (plein écran)
+    zoom: float = 1.0  # facteur de zoom (1.0–4.0), réglable
     min_duration: int = 0  # 0 = valeur par défaut de config
     max_duration: int = 0
     font: str = "Arial"

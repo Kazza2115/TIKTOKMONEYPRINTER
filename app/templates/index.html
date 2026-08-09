@@ -43,10 +43,10 @@
       </label>
       <label>Cadrage
         <select name="framing">
-          <option value="crop" selected>🔲 Plein écran (zoomable)</option>
-          <option value="fit">🌫️ Vidéo entière + fond flou</option>
+          <option value="fit" selected>🌫️ Vidéo entière visible (recommandé)</option>
+          <option value="crop">🔲 Plein écran (rogne les côtés)</option>
         </select>
-        <span class="muted small">règle l'intensité avec le zoom ci-dessous</span>
+        <span class="muted small">« Vidéo entière » = on voit toute la scène</span>
       </label>
       <label>Nb max de clips
         <input type="number" name="max_clips" value="5" min="1" max="10">
@@ -102,8 +102,8 @@
       </div>
       <div class="stack" style="width:100%;max-width:320px">
         <label>🔍 Zoom : <span id="zoom-val">1.00×</span>
-          <input type="range" name="zoom" min="0.5" max="3" step="0.05" value="1" id="zoom-range">
-          <span class="muted small">1× = plein écran · &gt;1 zoom avant · &lt;1 zoom arrière. Tu pourras réajuster clip par clip après.</span>
+          <input type="range" name="zoom" min="1" max="4" step="0.05" value="1" id="zoom-range">
+          <span class="muted small">1× = vidéo entière visible · augmente pour zoomer/remplir l'écran. Réajustable clip par clip après.</span>
         </label>
         <div class="row">
           <label>Taille hook
